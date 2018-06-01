@@ -77,8 +77,16 @@ public class AppService extends Service implements MqttCallback {
                 case "boot":
                     map.put("info/boot/status", "start");
                     break;
+                case "buttons":
+                    String button = intent.getStringExtra("button");
+                    map.put("info/buttons/"+button, "true");
+                    break;
+                case "seekbar":
+                    int value = intent.getIntExtra("value",0);
+                    map.put("info/buttons/seekbar", String.valueOf(value));
+                    break;
                 case "test":
-                    map.put("info/general/test", "ok");
+                    map.put("info/buttons/check", "true");
                     test = true;
                     break;
                 case "wifi":
@@ -87,7 +95,6 @@ public class AppService extends Service implements MqttCallback {
                     String ssid = info.getSSID();
                     Log.d(TAG, "ssid :" + ssid);
                     map.put("info/wifi/ssid", ssid);
-                    test = true;
                     break;
                 case "power":
                     String power = intent.getStringExtra("power");

@@ -4,7 +4,7 @@
 
     <header
         android:fragment="ru.codedevice.mqttbroadcastreceiver.SettingsActivity$GeneralPreferenceFragment"
-        android:icon="@drawable/ic_info_black_24dp"
+        android:icon="@drawable/ic_cloud_queue_black_24dp"
         android:title="@string/pref_header_mqtt" />
 
 </preference-headers>

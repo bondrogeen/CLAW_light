@@ -2,13 +2,18 @@ package ru.codedevice.mqttbroadcastreceiver;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,14 +21,18 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
 public class AppActivity extends AppCompatActivity {
 
     final int REQUEST_CODE = 1;
-
+    SharedPreferences settings;
+    int value_seekbar = 0;
+    String TAG = "AppActivity";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,19 +67,89 @@ public class AppActivity extends AppCompatActivity {
             }
         });
 
-//        startService(new Intent(this, AppService.class));
+        ImageView img = findViewById(R.id.pay_pal);
+        img.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=HYHDHXVH6UE3C"));
+                startActivity(browserIntent);
+            }
+        });
 
+        ImageView green = findViewById(R.id.green);
+        green.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(AppActivity.this, AppService.class);
+                intent.putExtra("statusInit","buttons");
+                intent.putExtra("button","green");
+                startService(intent);
+            }
+        });
+        ImageView red = findViewById(R.id.red);
+        red.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(AppActivity.this, AppService.class);
+                intent.putExtra("statusInit","buttons");
+                intent.putExtra("button","red");
+                startService(intent);
+            }
+        });
+
+        ImageView orange = findViewById(R.id.orange);
+        orange.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(AppActivity.this, AppService.class);
+                intent.putExtra("statusInit","buttons");
+                intent.putExtra("button","orange");
+                startService(intent);
+            }
+        });
+        ImageView blue = findViewById(R.id.blue);
+        blue.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(AppActivity.this, AppService.class);
+                intent.putExtra("statusInit","buttons");
+                intent.putExtra("button","blue");
+                startService(intent);
+            }
+        });
+
+
+        SeekBar seek = findViewById(R.id.seekBar);
+        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress,boolean fromUser) {
+                value_seekbar = progress;
+                Log.d(TAG, "progress : " +progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                // TODO Auto-generated method stub
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                // TODO Auto-generated method stub
+                Intent intent = new Intent(AppActivity.this, AppService.class);
+                intent.putExtra("statusInit","seekbar");
+                intent.putExtra("value",value_seekbar);
+                startService(intent);
+            }
+        });
+
+        settings = PreferenceManager.getDefaultSharedPreferences(this);
+        String mqtt_device = settings.getString("mqtt_device", "");
+        if (mqtt_device==null || mqtt_device.equals("")) {
+            SharedPreferences.Editor editor = settings.edit();
+            editor.putString("mqtt_device", Build.MODEL.replaceAll("\\s+",""));
+            editor.apply();
+        }
     }
-
-//
-//    @Override
-//    public void onClick(View v) {
-//        Intent intent;
-//
-//        intent = new Intent(this, SecondActivity.class);
-//        startActivityForResult(intent, REQUEST_CODE);
-//    }
-
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {

@@ -3,7 +3,7 @@
     <SwitchPreference
         android:defaultValue="false"
         android:key="mqtt_run"
-        android:title="Switch preference" />
+        android:title="Run" />
     <EditTextPreference
         android:capitalize="words"
         android:defaultValue="my.mqtt.com"
