@@ -52,6 +52,7 @@ public class AppService extends Service implements MqttCallback {
     Boolean mqtt_run;
     Boolean only_one = true;
     Boolean test = false;
+    int list_general_full_battery;
     Map<String, String> map;
 
     @Override
@@ -85,6 +86,10 @@ public class AppService extends Service implements MqttCallback {
                     int value = intent.getIntExtra("value",0);
                     map.put("info/buttons/seekbar", String.valueOf(value));
                     break;
+                case "key":
+                    String key = intent.getStringExtra("key");
+                    map.put("info/buttons/key_"+key, "true");
+                    break;
                 case "test":
                     map.put("info/buttons/check", "true");
                     test = true;
@@ -108,7 +113,8 @@ public class AppService extends Service implements MqttCallback {
                     break;
                 case "batteryInfo":
                     int level = intent.getIntExtra("level", -1);
-                    if(level == 95 && only_one){
+                    list_general_full_battery = settings.getInt("list_general_full_battery", 100);
+                    if(level == list_general_full_battery && only_one){
                         map.put("info/battery/status", "ok");
                         only_one = false;
                     }

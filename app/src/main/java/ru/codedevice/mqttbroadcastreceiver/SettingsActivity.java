@@ -1,6 +1,7 @@
 package ru.codedevice.mqttbroadcastreceiver;
 
 import android.annotation.TargetApi;
+import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
@@ -17,6 +18,7 @@ import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.preference.RingtonePreference;
 import android.text.TextUtils;
+import android.view.KeyEvent;
 import android.view.MenuItem;
 
 import java.util.List;
@@ -85,6 +87,16 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             return true;
         }
     };
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == android.R.id.home) {
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
 
     /**
      * Helper method to determine if the device has an extra-large screen. For
@@ -157,6 +169,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
      */
     protected boolean isValidFragment(String fragmentName) {
         return PreferenceFragment.class.getName().equals(fragmentName)
+                || MQTTPreferenceFragment.class.getName().equals(fragmentName)
                 || GeneralPreferenceFragment.class.getName().equals(fragmentName);
     }
 
@@ -165,11 +178,11 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
      * activity is showing a two-pane settings UI.
      */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-    public static class GeneralPreferenceFragment extends PreferenceFragment {
+    public static class MQTTPreferenceFragment extends PreferenceFragment {
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-            addPreferencesFromResource(R.xml.pref_general);
+            addPreferencesFromResource(R.xml.pref_mqtt);
             setHasOptionsMenu(true);
 
             bindPreferenceSummaryToValue(findPreference("mqtt_server"));
@@ -185,6 +198,36 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             int id = item.getItemId();
             if (id == android.R.id.home) {
                 startActivity(new Intent(getActivity(), SettingsActivity.class));
+                return true;
+            }
+            return super.onOptionsItemSelected(item);
+        }
+
+
+    }
+
+    /**
+     * This fragment shows general preferences only. It is used when the
+     * activity is showing a two-pane settings UI.
+     */
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
+    public static class GeneralPreferenceFragment extends PreferenceFragment {
+        @Override
+        public void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+            addPreferencesFromResource(R.xml.pref_general);
+            setHasOptionsMenu(true);
+
+
+        }
+
+        @Override
+        public boolean onOptionsItemSelected(MenuItem item) {
+            int id = item.getItemId();
+            if (id == android.R.id.home) {
+//                startActivity(new Intent(getActivity(), SettingsActivity.class));
+                Instrumentation inst = new Instrumentation();
+                inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
                 return true;
             }
             return super.onOptionsItemSelected(item);
