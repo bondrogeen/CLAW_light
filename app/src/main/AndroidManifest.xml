@@ -17,7 +17,6 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
         <activity
             android:name=".AppActivity"
             android:label="@string/app_name"
@@ -28,6 +27,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/app_name"></activity>
 
         <service android:name="org.eclipse.paho.android.service.MqttService" />
         <service
@@ -55,9 +57,8 @@
 
         <activity
             android:name=".SettingsActivity"
-            android:label="@string/title_activity_settings">
-
-        </activity>
+            android:label="@string/title_activity_settings"></activity>
+        <activity android:name=".AppCreateActivity"></activity>
     </application>
 
 </manifest>

@@ -5,9 +5,14 @@
     android:id="@+id/constraint_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/pink"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context=".AppActivity"
     tools:showIn="@layout/app_bar_main">
+
+    <com.diegodobelo.expandingview.ExpandingList
+        android:id="@+id/expanding_list_main"
+        android:layout_width="match_parent"
+        android:background="@color/colorBackground"
+        android:layout_height="match_parent"/>
 
 </android.support.constraint.ConstraintLayout>

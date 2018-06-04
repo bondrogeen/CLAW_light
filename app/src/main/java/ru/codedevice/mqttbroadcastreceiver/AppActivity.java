@@ -1,20 +1,17 @@
 package ru.codedevice.mqttbroadcastreceiver;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.constraint.ConstraintLayout;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
-import android.util.DisplayMetrics;
+import android.support.v7.app.AlertDialog;
+import android.text.InputType;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -24,78 +21,52 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.Switch;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import com.afollestad.materialdialogs.DialogAction;
+import com.afollestad.materialdialogs.MaterialDialog;
+import com.diegodobelo.expandingview.ExpandingItem;
+import com.diegodobelo.expandingview.ExpandingList;
 
-import me.drakeet.materialdialog.MaterialDialog;
+import libs.mjn.prettydialog.PrettyDialog;
+import libs.mjn.prettydialog.PrettyDialogCallback;
+
+import static android.view.View.*;
 
 public class AppActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
-    private static final AtomicInteger sNextGeneratedId = new AtomicInteger(1);
-
     String TAG = "AppActivity";
-    int width;
-    MaterialDialog mMaterialDialog;
+    private ExpandingList mExpandingList;
+
+    interface OnItemCreated {
+        void itemCreated(String title);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
-        LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        View v = inflater.inflate(R.layout.activity_main, null);
-
-        ConstraintLayout sv = v.findViewById(R.id.constraint_layout);
-
-
-        DisplayMetrics dm = new DisplayMetrics();
-        this.getWindow().getWindowManager().getDefaultDisplay().getMetrics(dm);
-        width = dm.widthPixels;
-        Log.d(TAG, "width : " +width);
-
-
-//        LinearLayout ll = new LinearLayout(this);
-//        ll.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-//        ll.setOrientation(LinearLayout.VERTICAL);
-//
-//        ll.addView(addSwitch(this));
-
-        ScrollView scroll = new ScrollView(this);
-        scroll.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-        if(android.os.Build.VERSION.SDK_INT < 16) {
-            scroll.setBackgroundDrawable(getResources().getDrawable(R.drawable.side_nav_bar));
-        }else {
-            scroll.setBackground(getResources().getDrawable(R.drawable.side_nav_bar));
-        }
-
-        LinearLayout ll = new LinearLayout(this);
-        ll.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        ll.setOrientation(LinearLayout.VERTICAL);
-
-        ll.addView(addSwitch(this));
-        ll.addView(addSwitch(this));
-
-
-        scroll.addView(ll);
-        sv.addView(scroll);
-
-        setContentView(v);
-
-//        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        fab.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                new MaterialDialog.Builder(AppActivity.this)
+                        .title("Enter title")
+//                        .content(R.string.input_content)
+                        .inputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_CLASS_TEXT)
+                        .input("Holl", "", new MaterialDialog.InputCallback() {
+                            @Override
+                            public void onInput(MaterialDialog dialog, CharSequence input) {
+                                addItem(String.valueOf(input), new String[]{"First"}, R.color.purple, R.drawable.ic_ghost);
+                            }
+                        }).show();
+
             }
         });
 
@@ -107,30 +78,9 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
 
         NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
-
-        mMaterialDialog = new MaterialDialog(this)
-                .setTitle("MaterialDialog")
-                .setMessage("Hello world!")
-                .setPositiveButton("OK", new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        mMaterialDialog.dismiss();
-                    }
-                })
-                .setNegativeButton("CANCEL", new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        mMaterialDialog.dismiss();
-                    }
-                });
-
-        mMaterialDialog.show();
-
-        mMaterialDialog.setTitle("Ghjdthrf");
-        mMaterialDialog.show();
-// You can change the message anytime. after show
-        mMaterialDialog.setMessage("Текст сообщения");
-
+        mExpandingList = findViewById(R.id.expanding_list_main);
+        createItems();
+//        startActivity(new Intent(AppActivity.this, MainActivity.class));
     }
 
     @Override
@@ -178,7 +128,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
         switch (id) {
             case R.id.nav_settings:
@@ -203,56 +153,175 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     }
 
 
-    private LinearLayout addSwitch(Context context) {
-        LinearLayout ll = new LinearLayout(this);
-        LinearLayout.LayoutParams param = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        param.setMargins(20,30,20,10);
-        ll.setLayoutParams(param);
-        ll.setOrientation(LinearLayout.HORIZONTAL);
-
-
-        Switch aswitch = new Switch(context);
-        aswitch.setLayoutParams(new ViewGroup.LayoutParams
-                (width/2, ViewGroup.LayoutParams.WRAP_CONTENT));
-        aswitch.setText("Name");
-        aswitch.setId(generateViewId());
-        aswitch.setTextSize(TypedValue.COMPLEX_UNIT_DIP,20);
-        aswitch.setBackgroundColor(Color.parseColor("#DCDCDC"));
-        aswitch.setPadding(50,50,50,50);
-
-        ll.addView(aswitch);
-
-        Switch aswitch2 = new Switch(context);
-        aswitch2.setLayoutParams(new ViewGroup.LayoutParams
-                (width/2, ViewGroup.LayoutParams.WRAP_CONTENT));
-        aswitch2.setText("Name");
-        aswitch2.setId(generateViewId());
-        aswitch2.setTextSize(TypedValue.COMPLEX_UNIT_DIP,20);
-        aswitch2.setBackgroundColor(Color.parseColor("#DCDCDC"));
-        aswitch2.setPadding(50,50,50,50);
-
-        ll.addView(aswitch2);
-
-        return ll;
+    private void createItems() {
+        addItem("John", new String[]{"House", "Boat", "Candy", "Collection", "Sport", "Ball", "Head"}, R.color.pink, R.drawable.ic_ghost);
+        addItem("Mary", new String[]{"Dog", "Horse", "Boat"}, R.color.blue, R.drawable.ic_ghost);
+//        addItem("Ana", new String[]{"Cat"}, R.color.purple, R.drawable.ic_ghost);
+//        addItem("Peter", new String[]{"Parrot", "Elephant", "Coffee"}, R.color.yellow, R.drawable.ic_ghost);
+//        addItem("Joseph", new String[]{}, R.color.orange, R.drawable.ic_ghost);
+//        addItem("Paul", new String[]{"Golf", "Football"}, R.color.green, R.drawable.ic_ghost);
+//        addItem("Larry", new String[]{"Ferrari", "Mazda", "Honda", "Toyota", "Fiat"}, R.color.blue, R.drawable.ic_ghost);
+//        addItem("Moe", new String[]{"Beans", "Rice", "Meat"}, R.color.yellow, R.drawable.ic_ghost);
+//        addItem("Bart", new String[]{"Hamburger", "Ice cream", "Candy"}, R.color.purple, R.drawable.ic_ghost);
     }
 
-    @SuppressLint("NewApi")
-    public static int generateViewId() {
-        if (Build.VERSION.SDK_INT < 17) {
-            for (;;) {
-                final int result = sNextGeneratedId.get();
-                // aapt-generated IDs have the high byte nonzero; clamp to the range under that.
-                int newValue = result + 1;
-                if (newValue > 0x00FFFFFF)
-                    newValue = 1; // Roll over to 1, not 0.
-                if (sNextGeneratedId.compareAndSet(result, newValue)) {
-                    return result;
-                }
-            }
-        } else {
-            return View.generateViewId();
-        }
+    private void addItem(String title, String[] subItems, int colorRes, int iconRes) {
+        //Let's create an item with R.layout.expanding_layout
+        final ExpandingItem item = mExpandingList.createNewItem(R.layout.expanding_layout);
 
+
+        //If item creation is successful, let's configure it
+
+        if (item != null) {
+//            item.setStateChangedListener(new ExpandingItem.OnItemStateChanged() {
+//                @Override
+//                public void itemCollapseStateChanged(boolean expanded) {
+//                    Log.e(TAG, "itemCollapseStateChanged : "+expanded);
+//                }
+//
+//            });
+            item.setIndicatorColorRes(colorRes);
+            item.setIndicatorIconRes(iconRes);
+            //It is possible to get any view inside the inflated layout. Let's set the text in the item
+            TextView tit = item.findViewById(R.id.title);
+
+            tit.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    item.toggleExpanded();
+                }
+            });
+
+            tit.setOnLongClickListener(new OnLongClickListener() {
+                public boolean onLongClick(View arg0) {
+                    Log.d(TAG, "setOnClickListener : ");
+                    new MaterialDialog.Builder(AppActivity.this)
+                            .title(tit.getText())
+                            .positiveText("Delete")
+                            .negativeText("Create")
+                            .onPositive(new MaterialDialog.SingleButtonCallback() {
+                                @Override
+                                public void onClick(MaterialDialog dialog, DialogAction which) {
+                                    mExpandingList.removeItem(item);
+                                }
+                            })
+                            .onNegative(new MaterialDialog.SingleButtonCallback() {
+                                @Override
+                                public void onClick(MaterialDialog dialog, DialogAction which) {
+                                    showInsertDialog(new MainActivity.OnItemCreated() {
+                                        @Override
+                                        public void itemCreated(String title) {
+                                            View newSubItem = item.createSubItem();
+                                            configureSubItem(item, newSubItem, title,"");
+                                        }
+                                    });
+                                }
+                            })
+                            .show();
+
+//
+                    return true;
+                }
+            });
+
+            tit.setText(title);
+
+            //We can create items in batch.
+            item.createSubItems(subItems.length);
+            for (int i = 0; i < item.getSubItemsCount(); i++) {
+                //Let's get the created sub item by its index
+                final View view = item.getSubItemView(i);
+                //Let's set some values in
+                configureSubItem(item, view, subItems[i], String.valueOf(tit.getText()));
+            }
+        }
+    }
+
+    private void configureSubItem(final ExpandingItem item, final View view, String subTitle,String title) {
+        TextView sub_title = view.findViewById(R.id.sub_title);
+        sub_title.setText(subTitle);
+        view.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "view.setOnClickListener : ");
+
+                final PrettyDialog dialog = new PrettyDialog(AppActivity.this);
+                dialog
+                        .addButton(
+                                "OK",     // button text
+                                R.color.pdlg_color_white,
+                                R.color.pdlg_color_green,
+                                new PrettyDialogCallback() {  // button OnClick listener
+                                    @Override
+                                    public void onClick() {
+                                        Log.d(TAG, "item.findViewById(R.id.title) : "+title);
+                                    }
+                                }
+                        )
+                        .addButton(
+                                "Cancel",
+                                R.color.pdlg_color_white,
+                                R.color.pdlg_color_red,
+                                new PrettyDialogCallback() {
+                                    @Override
+                                    public void onClick() {
+                                        // Dismiss
+                                    }
+                                }
+                        )
+                        .addButton(
+                                "Option 3",
+                                R.color.pdlg_color_black,
+                                R.color.pdlg_color_gray,
+                                null
+                        )
+                        .show();
+
+            }
+        });
+
+
+
+        view.setOnLongClickListener(new OnLongClickListener() {
+            public boolean onLongClick(View arg0) {
+                Log.d(TAG, "setOnClickListener : ");
+                new MaterialDialog.Builder(AppActivity.this)
+                        .title(sub_title.getText())
+                        .positiveText("Delete")
+                        .negativeText("Edit")
+                        .onPositive(new MaterialDialog.SingleButtonCallback() {
+                            @Override
+                            public void onClick(MaterialDialog dialog, DialogAction which) {
+                                item.removeSubItem(view);
+                            }
+                        })
+                        .onNegative(new MaterialDialog.SingleButtonCallback() {
+                            @Override
+                            public void onClick(MaterialDialog dialog, DialogAction which) {
+
+                            }
+                        })
+                        .show();
+
+//
+                return true;
+            }
+        });
+    }
+
+    private void showInsertDialog(final MainActivity.OnItemCreated positive) {
+        final EditText text = new EditText(this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(text);
+        builder.setTitle(R.string.enter_title);
+        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                positive.itemCreated(text.getText().toString());
+            }
+        });
+        builder.setNegativeButton(android.R.string.cancel, null);
+        builder.show();
     }
 
 }
