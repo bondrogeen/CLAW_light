@@ -19,9 +19,6 @@ import com.afollestad.materialdialogs.Theme;
 import com.diegodobelo.expandingview.ExpandingItem;
 import com.diegodobelo.expandingview.ExpandingList;
 
-import libs.mjn.prettydialog.PrettyDialog;
-import libs.mjn.prettydialog.PrettyDialogCallback;
-
 
 public class MainActivity extends AppCompatActivity {
     private ExpandingList mExpandingList;
@@ -122,38 +119,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "view.setOnClickListener : ");
-
-                final PrettyDialog dialog = new PrettyDialog(MainActivity.this);
-                dialog
-                        .addButton(
-                                "OK",     // button text
-                                R.color.pdlg_color_white,  // button text color
-                                R.color.pdlg_color_green,  // button background color
-                                new PrettyDialogCallback() {  // button OnClick listener
-                                    @Override
-                                    public void onClick() {
-                                        // Do what you gotta do
-                                    }
-                                }
-                        )
-                        .addButton(
-                                "Cancel",
-                                R.color.pdlg_color_white,
-                                R.color.pdlg_color_red,
-                                new PrettyDialogCallback() {
-                                    @Override
-                                    public void onClick() {
-                                        // Dismiss
-                                    }
-                                }
-                        )
-                        .addButton(
-                                "Option 3",
-                                R.color.pdlg_color_black,
-                                R.color.pdlg_color_gray,
-                                null
-                        )
-                        .show();
 
             }
         });

@@ -1,15 +1,12 @@
 package ru.codedevice.mqttbroadcastreceiver;
 
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
-import android.text.InputType;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -21,8 +18,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.afollestad.materialdialogs.DialogAction;
@@ -30,8 +27,9 @@ import com.afollestad.materialdialogs.MaterialDialog;
 import com.diegodobelo.expandingview.ExpandingItem;
 import com.diegodobelo.expandingview.ExpandingList;
 
-import libs.mjn.prettydialog.PrettyDialog;
-import libs.mjn.prettydialog.PrettyDialogCallback;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import static android.view.View.*;
 
@@ -39,6 +37,13 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
 
     String TAG = "AppActivity";
     private ExpandingList mExpandingList;
+
+    JSONObject mainObject = new JSONObject();
+    JSONObject subObject =new JSONObject();
+    JSONArray subArray = new JSONArray();
+    JSONArray allArray = new JSONArray();
+
+
 
     interface OnItemCreated {
         void itemCreated(String title);
@@ -56,17 +61,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         fab.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                new MaterialDialog.Builder(AppActivity.this)
-                        .title("Enter title")
-//                        .content(R.string.input_content)
-                        .inputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_CLASS_TEXT)
-                        .input("Holl", "", new MaterialDialog.InputCallback() {
-                            @Override
-                            public void onInput(MaterialDialog dialog, CharSequence input) {
-                                addItem(String.valueOf(input), new String[]{"First"}, R.color.purple, R.drawable.ic_ghost);
-                            }
-                        }).show();
-
+                createElementItem();
             }
         });
 
@@ -79,8 +74,28 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
         mExpandingList = findViewById(R.id.expanding_list_main);
+
+        allArray = Storage.getArr("allArray");
+
+        if(allArray == null){
+            allArray = new JSONArray();
+        try {
+            subObject.put("name","First");
+            subObject.put("topic","first");
+            subArray.put(subObject);
+            mainObject.put("name","RoomNew");
+            mainObject.put("topic","room");
+            mainObject.put("color",R.color.blue);
+            mainObject.put("icon",R.drawable.ic_ghost);
+            mainObject.put("subArray",subArray);
+            allArray.put(mainObject);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        }
+
         createItems();
-//        startActivity(new Intent(AppActivity.this, MainActivity.class));
     }
 
     @Override
@@ -152,39 +167,69 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         return true;
     }
 
-
-    private void createItems() {
-        addItem("John", new String[]{"House", "Boat", "Candy", "Collection", "Sport", "Ball", "Head"}, R.color.pink, R.drawable.ic_ghost);
-        addItem("Mary", new String[]{"Dog", "Horse", "Boat"}, R.color.blue, R.drawable.ic_ghost);
-//        addItem("Ana", new String[]{"Cat"}, R.color.purple, R.drawable.ic_ghost);
-//        addItem("Peter", new String[]{"Parrot", "Elephant", "Coffee"}, R.color.yellow, R.drawable.ic_ghost);
-//        addItem("Joseph", new String[]{}, R.color.orange, R.drawable.ic_ghost);
-//        addItem("Paul", new String[]{"Golf", "Football"}, R.color.green, R.drawable.ic_ghost);
-//        addItem("Larry", new String[]{"Ferrari", "Mazda", "Honda", "Toyota", "Fiat"}, R.color.blue, R.drawable.ic_ghost);
-//        addItem("Moe", new String[]{"Beans", "Rice", "Meat"}, R.color.yellow, R.drawable.ic_ghost);
-//        addItem("Bart", new String[]{"Hamburger", "Ice cream", "Candy"}, R.color.purple, R.drawable.ic_ghost);
+    public JSONObject findArr(JSONArray array,String name){
+        for (int i = 0; i < array.length(); i++) {
+            try {
+                JSONObject Object = array.getJSONObject(i);
+                if (Object.get("name").equals(name)){
+                    return Object;
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return new JSONObject();
     }
 
-    private void addItem(String title, String[] subItems, int colorRes, int iconRes) {
-        //Let's create an item with R.layout.expanding_layout
+    public JSONArray removeArr(JSONArray array,String topic){
+        JSONArray newArr = new JSONArray();
+        for (int i = 0; i < array.length(); i++) {
+            try {
+                JSONObject Object = array.getJSONObject(i);
+                if (!Object.get("topic").equals(topic)){
+                    newArr.put(Object);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return newArr;
+    }
+    private void createItems() {
+        for (int i = 0; i < allArray.length(); i++) {
+            try {
+                JSONObject Object = allArray.getJSONObject(i);
+                addItemObject(Object);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void addItemObject(JSONObject obj) {
         final ExpandingItem item = mExpandingList.createNewItem(R.layout.expanding_layout);
 
-
-        //If item creation is successful, let's configure it
+        int color = R.color.purple;
+        int icon = R.drawable.ic_ghost;
+        String name = "Room";
+        String topic = "room";
+        JSONArray subArray = null;
 
         if (item != null) {
-//            item.setStateChangedListener(new ExpandingItem.OnItemStateChanged() {
-//                @Override
-//                public void itemCollapseStateChanged(boolean expanded) {
-//                    Log.e(TAG, "itemCollapseStateChanged : "+expanded);
-//                }
-//
-//            });
-            item.setIndicatorColorRes(colorRes);
-            item.setIndicatorIconRes(iconRes);
-            //It is possible to get any view inside the inflated layout. Let's set the text in the item
+            try {
+                color = obj.getInt("color");
+                icon = obj.getInt("icon");
+                name = obj.getString("name");
+                topic = obj.getString("topic");
+                if(obj.has("subArray")){
+                    subArray = obj.getJSONArray("subArray");
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            item.setIndicatorColorRes(color);
+            item.setIndicatorIconRes(icon);
             TextView tit = item.findViewById(R.id.title);
-
             tit.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -192,6 +237,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                 }
             });
 
+            String finalTopic = topic;
             tit.setOnLongClickListener(new OnLongClickListener() {
                 public boolean onLongClick(View arg0) {
                     Log.d(TAG, "setOnClickListener : ");
@@ -203,18 +249,15 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                                 @Override
                                 public void onClick(MaterialDialog dialog, DialogAction which) {
                                     mExpandingList.removeItem(item);
+                                    Log.d(TAG, "finalTopic : " + finalTopic);
+                                    Storage.putArr("allArray",removeArr(allArray,finalTopic));
                                 }
                             })
                             .onNegative(new MaterialDialog.SingleButtonCallback() {
                                 @Override
                                 public void onClick(MaterialDialog dialog, DialogAction which) {
-                                    showInsertDialog(new MainActivity.OnItemCreated() {
-                                        @Override
-                                        public void itemCreated(String title) {
-                                            View newSubItem = item.createSubItem();
-                                            configureSubItem(item, newSubItem, title,"");
-                                        }
-                                    });
+                                    createElementSub(item, finalTopic);
+
                                 }
                             })
                             .show();
@@ -223,16 +266,23 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                     return true;
                 }
             });
+            tit.setText(name);
+            Log.d(TAG, "subArray : " + subArray);
+            if(subArray!=null && subArray.length()>0){
+                Log.d(TAG, "subArray!=null : ");
+                item.createSubItems(subArray.length());
+                for (int i = 0; i < subArray.length(); i++) {
+                    try {
+                        JSONObject subObject = subArray.getJSONObject(i);
+                        String subname = subObject.getString("name");
+                        String subtopic = subObject.getString("topic");
+                        final View view = item.getSubItemView(i);
 
-            tit.setText(title);
-
-            //We can create items in batch.
-            item.createSubItems(subItems.length);
-            for (int i = 0; i < item.getSubItemsCount(); i++) {
-                //Let's get the created sub item by its index
-                final View view = item.getSubItemView(i);
-                //Let's set some values in
-                configureSubItem(item, view, subItems[i], String.valueOf(tit.getText()));
+                        configureSubItem(item, view, subname, String.valueOf(tit.getText()));
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         }
     }
@@ -245,42 +295,8 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             public void onClick(View v) {
                 Log.d(TAG, "view.setOnClickListener : ");
 
-                final PrettyDialog dialog = new PrettyDialog(AppActivity.this);
-                dialog
-                        .addButton(
-                                "OK",     // button text
-                                R.color.pdlg_color_white,
-                                R.color.pdlg_color_green,
-                                new PrettyDialogCallback() {  // button OnClick listener
-                                    @Override
-                                    public void onClick() {
-                                        Log.d(TAG, "item.findViewById(R.id.title) : "+title);
-                                    }
-                                }
-                        )
-                        .addButton(
-                                "Cancel",
-                                R.color.pdlg_color_white,
-                                R.color.pdlg_color_red,
-                                new PrettyDialogCallback() {
-                                    @Override
-                                    public void onClick() {
-                                        // Dismiss
-                                    }
-                                }
-                        )
-                        .addButton(
-                                "Option 3",
-                                R.color.pdlg_color_black,
-                                R.color.pdlg_color_gray,
-                                null
-                        )
-                        .show();
-
             }
         });
-
-
 
         view.setOnLongClickListener(new OnLongClickListener() {
             public boolean onLongClick(View arg0) {
@@ -293,6 +309,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                             @Override
                             public void onClick(MaterialDialog dialog, DialogAction which) {
                                 item.removeSubItem(view);
+
                             }
                         })
                         .onNegative(new MaterialDialog.SingleButtonCallback() {
@@ -309,7 +326,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         });
     }
 
-    private void showInsertDialog(final MainActivity.OnItemCreated positive) {
+    private void showInsertDialog(final AppActivity.OnItemCreated positive) {
         final EditText text = new EditText(this);
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setView(text);
@@ -322,6 +339,93 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         });
         builder.setNegativeButton(android.R.string.cancel, null);
         builder.show();
+    }
+
+    public void createElementItem(){
+        View customView;
+        EditText name;
+        EditText topic;
+        Button button;
+        MaterialDialog dialog = new MaterialDialog.Builder(AppActivity.this)
+                .title("Add a new category")
+                .customView(R.layout.material_dialog_custom_view, true)
+                .build();
+
+        customView = dialog.getCustomView();
+        assert customView != null;
+        name = customView.findViewById(R.id.textName);
+        topic = customView.findViewById(R.id.textTopic);
+        button = customView.findViewById(R.id.buttonOk);
+        button.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                Boolean has = findArr(allArray, String.valueOf(name.getText()));
+//                Log.d(TAG, "has : " + has);
+                try {
+
+                    JSONObject newObj = new JSONObject();
+                    newObj.put("name",name.getText());
+                    newObj.put("topic",topic.getText());
+                    newObj.put("color",R.color.blue);
+                    newObj.put("icon",R.drawable.ic_ghost);
+                    allArray.put(newObj);
+
+                    Storage.putArr("allArray",allArray);
+                    addItemObject(newObj);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                dialog.dismiss();
+            }
+        });
+
+        dialog.show();
+    }
+
+    public void createElementSub(ExpandingItem item,String top){
+
+        View customView;
+        EditText name;
+        EditText topic;
+        Button button;
+        MaterialDialog dialog = new MaterialDialog.Builder(AppActivity.this)
+                .title("Add a new category")
+                .customView(R.layout.material_dialog_custom_view, true)
+                .build();
+
+        customView = dialog.getCustomView();
+        assert customView != null;
+        name = customView.findViewById(R.id.textName);
+        topic = customView.findViewById(R.id.textTopic);
+        button = customView.findViewById(R.id.buttonOk);
+
+
+        button.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                JSONObject obj = findArr(allArray,top);
+                JSONArray subArr;
+                try {
+                    if(obj.has("subArray")){
+                        subArr = obj.getJSONArray("subArray");
+                    }else{
+                        subArr = new JSONArray();
+                    }
+                    JSONObject newObj = new JSONObject();
+                    newObj.put("name",name.getText());
+                    newObj.put("topic",topic.getText());
+                    subArr.put(newObj);
+
+                    View newSubItem = item.createSubItem();
+                    configureSubItem(item, newSubItem, String.valueOf(name.getText()),"");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                dialog.dismiss();
+            }
+        });
+
+        dialog.show();
     }
 
 }
