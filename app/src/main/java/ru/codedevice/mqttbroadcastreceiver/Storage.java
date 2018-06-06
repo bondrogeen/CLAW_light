@@ -72,11 +72,11 @@ public class Storage {
     }
 
     public static void putArr(String key, JSONArray obj){
+        Log.v(TAG, "putArr : " + obj);
         File dir = create("json");
         if (dir!=null){
             File file = new File(dir, key+".json");
             writeFile(file,obj.toString());
-//        JSONObject jsonObj = new JSONObject("{\"phonetype\":\"N95\",\"cat\":\"WP\"}");
         }
     }
 
