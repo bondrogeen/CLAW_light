@@ -4,12 +4,24 @@
 
         <SwitchPreference
             android:defaultValue="false"
+            android:key="switch_preference_1"
+            android:title="Item" />
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="switch_preference_1"
+            android:title="Battery" />
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="switch_preference_1"
+            android:title=" Change wifi" />
+        <SwitchPreference
+            android:defaultValue="false"
             android:key="general_sms"
-            android:title="SMS" />
+            android:title=" Incoming sms" />
         <SwitchPreference
             android:defaultValue="false"
             android:key="general_call"
-            android:title="Call" />
+            android:title=" Incoming calls" />
     </PreferenceCategory>
     <PreferenceCategory android:title="Other">
         <ListPreference

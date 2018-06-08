@@ -61,6 +61,7 @@
         android:layout_marginTop="8dp"
         android:ems="10"
         android:inputType="text"
+        android:textColorLink="@color/red"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"

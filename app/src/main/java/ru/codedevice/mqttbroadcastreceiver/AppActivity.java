@@ -1,13 +1,21 @@
 package ru.codedevice.mqttbroadcastreceiver;
 
+import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.support.design.widget.NavigationView;
@@ -21,6 +29,7 @@ import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
@@ -30,6 +39,9 @@ import com.diegodobelo.expandingview.ExpandingList;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static android.view.View.*;
 
@@ -43,6 +55,9 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     JSONObject subObject =new JSONObject();
     JSONArray subArray = new JSONArray();
     JSONArray allArray = new JSONArray();
+
+    final int PERMISSION_REQUEST_CODE_WRITE_STORAGE = 1;
+    final int PERMISSION_REQUEST_CODE_READ_STORAGE = 2;
 
     interface OnItemCreated {
         void itemCreated(String title);
@@ -60,7 +75,13 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         fab.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                createElementItem();
+                if (checkPermission()){
+                    Log.d(TAG, "checkPermission() : " + checkPermission());
+                    createElementItem();
+                } else {
+                    requestPermission(); // Code for permission
+                    Log.d(TAG, "checkPermission() : " + checkPermission());
+                }
             }
         });
 
@@ -74,28 +95,13 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         navigationView.setNavigationItemSelectedListener(this);
         mExpandingList = findViewById(R.id.expanding_list_main);
 
-        allArray = Storage.getArr("allArray");
-
-        if(allArray == null){
-            Log.d(TAG, "allArray == null : ");
-            allArray = new JSONArray();
-        try {
-            subObject.put("name","First");
-            subObject.put("topic","first");
-            subArray.put(subObject);
-            mainObject.put("name","RoomNew");
-            mainObject.put("topic","room");
-            mainObject.put("color",R.color.blue);
-            mainObject.put("icon",R.drawable.ic_ghost);
-            mainObject.put("subArray",subArray);
-            allArray.put(mainObject);
-
-        } catch (JSONException e) {
-            e.printStackTrace();
+        if (checkPermission()){
+            Log.d(TAG, "checkPermission() : " + checkPermission());
+            createItems();
+        } else {
+            requestPermission(); // Code for permission
+            Log.d(TAG, "checkPermission() : " + checkPermission());
         }
-        }
-
-        createItems();
     }
 
     @Override
@@ -223,6 +229,30 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         return new JSONObject();
     }
 
+    public void sendIntent(String topic,String value){
+        Intent i = new Intent(this, AppService.class);
+        i.putExtra("statusInit","item");
+        i.putExtra("topic",topic);
+        i.putExtra("value",value);
+        startService(i);
+    }
+    public Boolean findTopic(JSONArray array,String name){
+        JSONObject Object;
+        String topic;
+        for (int i = 0; i < array.length(); i++) {
+            try {
+                Object = array.getJSONObject(i);
+                topic = String.valueOf(Object.get("topic"));
+                if (name.equals(topic)){
+                    return true;
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return false;
+    }
+
     public JSONArray removeArr(JSONArray array,String name){
         Log.d(TAG, "removeArr array : " + array);
         Log.d(TAG, "removeArr name : " + name);
@@ -247,6 +277,27 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     }
 
     private void createItems() {
+        allArray = Storage.getArr("allArray");
+
+        if(allArray == null){
+            Log.d(TAG, "allArray == null : ");
+            allArray = new JSONArray();
+            try {
+                subObject.put("name","First");
+                subObject.put("topic","first");
+                subArray.put(subObject);
+                mainObject.put("name","RoomNew");
+                mainObject.put("topic","room");
+                mainObject.put("color", R.color.blue);
+                mainObject.put("icon",R.drawable.ic_ghost);
+                mainObject.put("subArray",subArray);
+                allArray.put(mainObject);
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
         for (int i = 0; i < allArray.length(); i++) {
             try {
                 JSONObject Object = allArray.getJSONObject(i);
@@ -354,6 +405,44 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                 Log.d(TAG, "view.setOnClickListener itemTopic: " + itemTopic);
                 Log.d(TAG, "view.setOnClickListener subName: " + subName);
                 Log.d(TAG, "view.setOnClickListener subTopic: " + subTopic);
+                View customView;
+                Button button_on;
+                Button button_off;
+//                Button button_true;
+//                Button button_false;
+                MaterialDialog dialog = new MaterialDialog.Builder(AppActivity.this)
+                        .title(subName)
+                        .customView(R.layout.material_dialog_button, true)
+                        .build();
+                customView = dialog.getCustomView();
+                assert customView != null;
+                button_on = customView.findViewById(R.id.button_on);
+                button_off = customView.findViewById(R.id.button_off);
+//                button_on.setBackgroundColor(Color.GREEN);
+//                button_on.setTextColor(Color.WHITE);
+//                button_off.setBackgroundColor(Color.RED);
+//                button_off.setTextColor(Color.WHITE);
+                button_off.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        sendIntent(itemTopic + "/" + subTopic, "false");
+                        dialog.dismiss();
+                    }
+                });
+                button_on.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        sendIntent(itemTopic + "/" + subTopic, "true");
+                        dialog.dismiss();
+                    }
+                });
+
+//                button_true = customView.findViewById(R.id.button_true);
+//                button_false = customView.findViewById(R.id.button_false);
+                dialog.show();
+
+
+
             }
         });
 
@@ -367,8 +456,6 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                         .onPositive(new MaterialDialog.SingleButtonCallback() {
                             @Override
                             public void onClick(MaterialDialog dialog, DialogAction which) {
-                                item.removeSubItem(view);
-
                                 JSONObject obj = findArr(allArray,itemTopic);
                                 JSONArray subArr;
                                 try {
@@ -386,6 +473,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                                     allArray.put(obj);
                                     Log.d(TAG, "allArray allArray.put: " + allArray);
                                     Storage.putArr("allArray",allArray);
+                                    item.removeSubItem(view);
                                 } catch (JSONException e) {
                                     e.printStackTrace();
                                 }
@@ -394,13 +482,19 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                         .onNegative(new MaterialDialog.SingleButtonCallback() {
                             @Override
                             public void onClick(MaterialDialog dialog, DialogAction which) {
-
+                                editElementSub(item,view,itemName,itemTopic,subName,subTopic);
                             }
                         })
                         .show();//
                 return true;
             }
         });
+    }
+
+    public boolean containsWhiteSpace(String str){
+        Pattern pattern = Pattern.compile("\\s");
+        Matcher matcher = pattern.matcher(str);
+        return (matcher.find() || str.length() == 0);
     }
 
     public void createElementItem(){
@@ -417,29 +511,51 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         assert customView != null;
         name = customView.findViewById(R.id.textName);
         topic = customView.findViewById(R.id.textTopic);
+
+
         button = customView.findViewById(R.id.buttonOk);
         button.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    JSONObject newObj = new JSONObject();
-                    newObj.put("name",name.getText());
-                    newObj.put("topic",topic.getText());
-                    newObj.put("color",R.color.blue);
-                    newObj.put("icon",R.drawable.ic_ghost);
-                    newObj.put("subArray",new JSONArray());
-                    allArray.put(newObj);
-                    Storage.putArr("allArray",allArray);
-                    addItemObject(newObj);
-                    newObj = null;
-                } catch (JSONException e) {
-                    e.printStackTrace();
+                String topicText = String.valueOf(topic.getText());
+                Log.d(TAG, "topicText : true" + topicText);
+                Log.d(TAG, "findTopic : " + findTopic(allArray, topicText));
+                Log.d(TAG, "containsWhiteSpace("+topicText+") : " + containsWhiteSpace(topicText));
+                if(findTopic(allArray, topicText) || containsWhiteSpace(topicText)){
+                    topic.setTextColor(Color.RED);
+                    if(findTopic(allArray, topicText)){
+                        showToast("This topic already exists");
+                    }
+                    if(containsWhiteSpace(topicText)) {
+                        showToast("Topic must be without spaces and have at least one character");
+                    }
+                }else {
+                    try {
+                        JSONObject newObj = new JSONObject();
+                        newObj.put("name", name.getText());
+                        newObj.put("topic", topic.getText());
+                        newObj.put("color", R.color.blue);
+                        newObj.put("icon", R.drawable.ic_ghost);
+                        newObj.put("subArray", new JSONArray());
+                        allArray.put(newObj);
+                        Storage.putArr("allArray", allArray);
+                        addItemObject(newObj);
+                        newObj = null;
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    dialog.dismiss();
                 }
-                dialog.dismiss();
             }
         });
 
         dialog.show();
+    }
+
+    public void showToast(String test) {
+        Toast toast = Toast.makeText(getApplicationContext(),test,Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.CENTER, 0, 0);
+        toast.show();
     }
 
     public void createElementSub(ExpandingItem item,String itemName , String itemTopic){
@@ -463,43 +579,189 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         button.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(TAG, "allArray : "+ allArray);
+                String topicText = String.valueOf(topic.getText());
                 JSONObject obj = findArr(allArray,itemTopic);
-                Log.d(TAG, "find obj : " + obj);
                 JSONArray subArr;
                 try {
-                    if(obj.has("subArray")){
+                    if (obj.has("subArray")) {
                         Log.d(TAG, "find : ");
                         subArr = obj.getJSONArray("subArray");
-                    }else{
+                    } else {
                         Log.d(TAG, "Not find : ");
                         subArr = new JSONArray();
                     }
-                    JSONObject newObj = new JSONObject();
-                    newObj.put("name",name.getText());
-                    newObj.put("topic",topic.getText());
-                    Log.d(TAG, "newObj : "+ newObj);
-                    subArr.put(newObj);
-                    Log.d(TAG, "subArray : "+ subArr);
-                    obj.put("subArray",subArr);
-                    Log.d(TAG, "obj : "+ obj);
-                    Log.d(TAG, "allArray : "+ allArray);
-                    allArray = removeArr(allArray,itemTopic);
-                    Log.d(TAG, "allArray : "+ allArray);
-                    allArray.put(obj);
-                    Log.d(TAG, "allArray : "+ allArray);
-                    Storage.putArr("allArray",allArray);
-                    Log.d(TAG, "allArray : "+ allArray);
-                    View newSubItem = item.createSubItem();
-                    configureSubItem(item, newSubItem, itemName, itemTopic , String.valueOf(name.getText()),String.valueOf(topic.getText()));
+                    if (findTopic(subArr, topicText) || containsWhiteSpace(topicText)) {
+                        topic.setTextColor(Color.RED);
+                        if (findTopic(subArr, topicText)) {
+                            showToast("This topic already exists");
+                        }
+                        if (containsWhiteSpace(topicText)) {
+                            showToast("Topic must be without spaces and have at least one character");
+                        }
+                    } else {
+                        JSONObject newObj = new JSONObject();
+                        newObj.put("name", name.getText());
+                        newObj.put("topic", topic.getText());
+                        Log.d(TAG, "newObj : " + newObj);
+                        subArr.put(newObj);
+                        Log.d(TAG, "subArray : " + subArr);
+                        obj.put("subArray", subArr);
+                        Log.d(TAG, "obj : " + obj);
+                        Log.d(TAG, "allArray : " + allArray);
+                        allArray = removeArr(allArray, itemTopic);
+                        Log.d(TAG, "allArray : " + allArray);
+                        allArray.put(obj);
+                        Log.d(TAG, "allArray : " + allArray);
+                        Storage.putArr("allArray", allArray);
+                        Log.d(TAG, "allArray : " + allArray);
+                        View newSubItem = item.createSubItem();
+                        configureSubItem(item, newSubItem, itemName, itemTopic, String.valueOf(name.getText()), String.valueOf(topic.getText()));
+                        dialog.dismiss();
+                    }
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                dialog.dismiss();
+
+
+
             }
         });
 
         dialog.show();
+    }
+
+    public void editElementSub(ExpandingItem item, final View view,String itemName,String itemTopic,String subName,String subTopic){
+        Log.d(TAG, "editElementSub : ");
+        Log.d(TAG, "subTopic : "+ subTopic);
+        View customView;
+        EditText name;
+        EditText topic;
+        Button button;
+        MaterialDialog dialog = new MaterialDialog.Builder(AppActivity.this)
+                .title("Edit a sub item")
+                .customView(R.layout.material_dialog_custom_view, true)
+                .build();
+        customView = dialog.getCustomView();
+        assert customView != null;
+        name = customView.findViewById(R.id.textName);
+        topic = customView.findViewById(R.id.textTopic);
+        button = customView.findViewById(R.id.buttonOk);
+        name.setText(subName);
+        topic.setText(subTopic);
+
+        button.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String topicText = String.valueOf(topic.getText());
+                JSONObject obj = findArr(allArray,itemTopic);
+                JSONArray subArr;
+                try {
+                    if (obj.has("subArray")) {
+                        Log.d(TAG, "find : ");
+                        subArr = obj.getJSONArray("subArray");
+                    } else {
+                        Log.d(TAG, "Not find : ");
+                        subArr = new JSONArray();
+                    }
+                    if (containsWhiteSpace(topicText)) {
+                        topic.setTextColor(Color.RED);
+                        if (containsWhiteSpace(topicText)) {
+                            showToast("Topic must be without spaces and have at least one character");
+                        }
+                    } else {
+                        JSONObject newObj = new JSONObject();
+                        newObj.put("name", name.getText());
+                        newObj.put("topic", topic.getText());
+                        Log.d(TAG, "newObj : " + newObj);
+                        subArr = removeArr(subArr, itemTopic);
+                        subArr.put(newObj);
+                        Log.d(TAG, "subArray : " + subArr);
+                        obj.put("subArray", subArr);
+                        Log.d(TAG, "obj : " + obj);
+                        Log.d(TAG, "allArray : " + allArray);
+                        allArray = removeArr(allArray, itemTopic);
+                        Log.d(TAG, "allArray : " + allArray);
+                        allArray.put(obj);
+                        Log.d(TAG, "allArray : " + allArray);
+                        Storage.putArr("allArray", allArray);
+                        Log.d(TAG, "allArray : " + allArray);
+                        View newSubItem = item.createSubItem();
+                        item.removeSubItem(view);
+                        configureSubItem(item, newSubItem, itemName, itemTopic, String.valueOf(name.getText()), String.valueOf(topic.getText()));
+                        dialog.dismiss();
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+
+
+            }
+        });
+
+        dialog.show();
+    }
+
+    private boolean checkPermission() {
+        if (Build.VERSION.SDK_INT >= 23){
+            int write = ContextCompat.checkSelfPermission(AppActivity.this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            int read = ContextCompat.checkSelfPermission(AppActivity.this, android.Manifest.permission.READ_EXTERNAL_STORAGE);
+            if (write == PackageManager.PERMISSION_GRANTED && read == PackageManager.PERMISSION_GRANTED) {
+                return true;
+            } else {
+                return false;
+            }
+        }else{
+        Log.d(TAG, "Code for Below 23 API Oriented Device  : ");
+            return true;
+        }
+    }
+
+    private void requestPermission() {
+
+        if (ActivityCompat.shouldShowRequestPermissionRationale(AppActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            MaterialDialog dialog = new MaterialDialog.Builder(this)
+                    .title("Permission")
+                    .content("You need to grant permission to write settings to create categories and sub-elements in storage")
+                    .positiveText("OK")
+                    .onPositive(new MaterialDialog.SingleButtonCallback() {
+                        @Override
+                        public void onClick(MaterialDialog dialog, DialogAction which) {
+                            openApplicationSettings();
+                            }
+                    })
+                    .show();
+        } else {
+//                ActivityCompat.requestPermissions(AppActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_WRITE_STORAGE);
+                ActivityCompat.requestPermissions(AppActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_READ_STORAGE);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSION_REQUEST_CODE_WRITE_STORAGE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.e("value", "Permission Granted, PERMISSION_REQUEST_CODE_WRITE_STORAGE .");
+                    createItems();
+                } else {
+                    Log.e("value", "Permission Denied, PERMISSION_REQUEST_CODE_WRITE_STORAGE .");
+                }
+                break;
+            case PERMISSION_REQUEST_CODE_READ_STORAGE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.e("value", "Permission Granted, PERMISSION_REQUEST_CODE_READ_STORAGE .");
+                } else {
+                    Log.e("value", "Permission Denied, PERMISSION_REQUEST_CODE_READ_STORAGE .");
+                }
+                break;
+        }
+    }
+
+    public void openApplicationSettings() {
+        Intent appSettingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:" + getPackageName()));
+        startActivityForResult(appSettingsIntent, PERMISSION_REQUEST_CODE_WRITE_STORAGE);
     }
 
 }
