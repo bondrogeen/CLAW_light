@@ -2,16 +2,20 @@ package ru.codedevice.mqttbroadcastreceiver;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.provider.ContactsContract;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -25,6 +29,7 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -78,6 +83,28 @@ public class AppService extends Service implements MqttCallback {
                 case "boot":
                     map.put("info/boot/status", "start");
                     break;
+                case "call":
+                    String number = intent.getStringExtra("number");
+                    String callStatus = intent.getStringExtra("type");
+                    Log.e(TAG, "callStatus   :  " + callStatus);
+
+                    map.put("info/call/status", callStatus);
+                    if(number != null){
+                        String name = uploadContactPhoto(this,number);
+                        map.put("info/call/number", number);
+                        map.put("info/call/name", name);
+                    }
+                    break;
+                case "sms":
+                    String numberSms = intent.getStringExtra("number");
+                    String textSms = intent.getStringExtra("text");
+                    Log.e(TAG, "numberSms   :  " + numberSms);
+                    Log.e(TAG, "textSms   :  " + textSms);
+                    String name = uploadContactPhoto(this,numberSms);
+                    map.put("info/sms/number", numberSms);
+                    map.put("info/sms/text", textSms);
+                    map.put("info/sms/name", name);
+                    break;
                 case "buttons":
                     String button = intent.getStringExtra("button");
                     map.put("info/buttons/"+button, "true");
@@ -85,7 +112,7 @@ public class AppService extends Service implements MqttCallback {
                 case "item":
                     String val = intent.getStringExtra("value");
                     String topic = intent.getStringExtra("topic");
-                    map.put("item/" + topic, val);
+                    map.put("info/item/" + topic, val);
                     break;
                 case "seekbar":
                     int value = intent.getIntExtra("value",0);
@@ -93,7 +120,8 @@ public class AppService extends Service implements MqttCallback {
                     break;
                 case "key":
                     String key = intent.getStringExtra("key");
-                    map.put("info/buttons/key_"+key, "true");
+                    String key_value = intent.getStringExtra("value");
+                    map.put("info/key/"+key, key_value);
                     break;
                 case "test":
                     map.put("info/buttons/check", "true");
@@ -200,6 +228,7 @@ public class AppService extends Service implements MqttCallback {
         if (!mqtt_firs_topic.equals("")){
             mqtt_device = mqtt_firs_topic+"/"+mqtt_device;
         }
+
     }
 
     public void initMQTT() {
@@ -307,16 +336,24 @@ public class AppService extends Service implements MqttCallback {
         }
     }
 
-//    public float getBatteryLevel() {
-//        Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-//        int level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-//        int scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-//
-//        // Error checking that probably isn't needed but I added just in case.
-//        if(level == -1 || scale == -1) {
-//            return 50.0f;
-//        }
-//
-//        return ((float)level / (float)scale) * 100.0f;
-//    }
+
+        private String uploadContactPhoto(Context context, String number) {
+            String name = null;
+            String contactId = null;
+            InputStream input = null;
+            String[] projection = new String[] {
+                    ContactsContract.PhoneLookup.DISPLAY_NAME, ContactsContract.PhoneLookup._ID};
+            Uri contactUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number));
+            Cursor cursor = context.getContentResolver().query(contactUri, projection, null, null, null);
+            if (cursor.moveToFirst()) {
+                contactId = cursor.getString(cursor.getColumnIndex(ContactsContract.PhoneLookup._ID));
+                name = cursor.getString(cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME));
+                Uri uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, Long.parseLong(contactId));
+                Log.v("ffnet", "Started uploadcontactphoto: Contact Found @ " + number);
+                Log.v("ffnet", "Started uploadcontactphoto: Contact name = " + name);
+            } else {
+                Log.v("ffnet", "Started uploadcontactphoto: Contact Not Found @ " + number);
+            }
+            return name;
+    }
 }

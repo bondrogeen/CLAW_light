@@ -3,11 +3,13 @@ package ru.codedevice.mqttbroadcastreceiver;
 import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -40,6 +42,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,11 +54,31 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     String TAG = "AppActivity";
     private ExpandingList mExpandingList;
     MaterialDialog dialog;
+    SharedPreferences settings;
 
     JSONObject mainObject = new JSONObject();
     JSONObject subObject =new JSONObject();
     JSONArray subArray = new JSONArray();
     JSONArray allArray = new JSONArray();
+
+    Boolean general_key = false;
+    Boolean general_sms = false;
+    Boolean general_call = false;
+    Boolean permission_two = false;
+
+    String[] PERMISSION_CALL = new String[]{
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CONTACTS
+    };
+    String[] PERMISSION_SMS = new String[]{
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_CONTACTS
+    };
+    String[] PERMISSION_STORAGE = new String[]{
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
+
 
     final int PERMISSION_REQUEST_CODE_WRITE_STORAGE = 1;
     final int PERMISSION_REQUEST_CODE_READ_STORAGE = 2;
@@ -75,12 +99,8 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         fab.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (checkPermission()){
-                    Log.d(TAG, "checkPermission() : " + checkPermission());
+                if(checkPermissions(PERMISSION_STORAGE)){
                     createElementItem();
-                } else {
-                    requestPermission(); // Code for permission
-                    Log.d(TAG, "checkPermission() : " + checkPermission());
                 }
             }
         });
@@ -95,12 +115,10 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         navigationView.setNavigationItemSelectedListener(this);
         mExpandingList = findViewById(R.id.expanding_list_main);
 
-        if (checkPermission()){
-            Log.d(TAG, "checkPermission() : " + checkPermission());
+        initSettings();
+
+        if(checkPermissions(PERMISSION_STORAGE)){
             createItems();
-        } else {
-            requestPermission(); // Code for permission
-            Log.d(TAG, "checkPermission() : " + checkPermission());
         }
     }
 
@@ -108,12 +126,14 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     protected void onStart() {
         super.onStart();
         Log.d(TAG, "MainActivity: onStart()");
+        initSettings();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         Log.d(TAG, "MainActivity: onResume()");
+
     }
 
     @Override
@@ -138,21 +158,50 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
 
     }
 
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        Intent intent = new Intent(AppActivity.this, AppService.class);
-        intent.putExtra("statusInit","key");
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_VOLUME_UP:
-                intent.putExtra("key","up");
-                startService(intent);
-                return true;
-            case KeyEvent.KEYCODE_VOLUME_DOWN:
-                intent.putExtra("key","down");
-                startService(intent);
-                return true;
+    public void initSettings(){
+        settings = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = settings.edit();
+        general_key = settings.getBoolean("general_key", false);
+        general_sms = settings.getBoolean("general_sms", false);
+        general_call = settings.getBoolean("general_call", false);
+
+        if (general_sms){
+            if(!checkPermissions(PERMISSION_SMS)){
+                general_sms = false;
+                editor.putBoolean("general_sms",general_sms);
+                editor.apply();
+            }
         }
-        return super.onKeyDown(keyCode, event);
+        if (general_call){
+            if(!checkPermissions(PERMISSION_CALL)){
+                general_call = false;
+                editor.putBoolean("general_call",general_call);
+                editor.apply();
+            }
+        }
+
+    }
+
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if(general_key) {
+            Intent intent = new Intent(AppActivity.this, AppService.class);
+            intent.putExtra("statusInit", "key");
+            Log.d(TAG, "event : " + event.getAction());
+            int key = event.getKeyCode();
+            String value = String.valueOf(event.getAction());
+            if (event.getRepeatCount() == 0) {
+                intent.putExtra("key", Variable.KEY[key]);
+                intent.putExtra("value", value);
+                startService(intent);
+            }
+            if (event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN
+                    || event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP) {
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     @Override
@@ -702,66 +751,57 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         dialog.show();
     }
 
-    private boolean checkPermission() {
-        if (Build.VERSION.SDK_INT >= 23){
-            int write = ContextCompat.checkSelfPermission(AppActivity.this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            int read = ContextCompat.checkSelfPermission(AppActivity.this, android.Manifest.permission.READ_EXTERNAL_STORAGE);
-            if (write == PackageManager.PERMISSION_GRANTED && read == PackageManager.PERMISSION_GRANTED) {
-                return true;
-            } else {
+    private boolean checkPermissions(String[] permissions) {
+        if (Build.VERSION.SDK_INT >= 23) {
+            int result;
+            List<String> listPermissionsNeeded = new ArrayList<>();
+            for (String p : permissions) {
+                result = ContextCompat.checkSelfPermission(this, p);
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    listPermissionsNeeded.add(p);
+                }
+            }
+            if (!listPermissionsNeeded.isEmpty()) {
+                ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]), 100);
                 return false;
             }
-        }else{
-        Log.d(TAG, "Code for Below 23 API Oriented Device  : ");
-            return true;
         }
+        return true;
     }
 
     private void requestPermission() {
-
-        if (ActivityCompat.shouldShowRequestPermissionRationale(AppActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            MaterialDialog dialog = new MaterialDialog.Builder(this)
+        if(permission_two) {
+            dialog = new MaterialDialog.Builder(this)
                     .title("Permission")
-                    .content("You need to grant permission to write settings to create categories and sub-elements in storage")
+                    .content("In order to use this function, you must provide a permission.")
                     .positiveText("OK")
                     .onPositive(new MaterialDialog.SingleButtonCallback() {
                         @Override
                         public void onClick(MaterialDialog dialog, DialogAction which) {
-                            openApplicationSettings();
-                            }
+                            Intent appSettingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.parse("package:" + getPackageName()));
+                            startActivityForResult(appSettingsIntent, 100);
+                        }
                     })
                     .show();
-        } else {
-//                ActivityCompat.requestPermissions(AppActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_WRITE_STORAGE);
-                ActivityCompat.requestPermissions(AppActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE_READ_STORAGE);
+        }else{
+            permission_two = true;
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case PERMISSION_REQUEST_CODE_WRITE_STORAGE:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Log.e("value", "Permission Granted, PERMISSION_REQUEST_CODE_WRITE_STORAGE .");
-                    createItems();
-                } else {
-                    Log.e("value", "Permission Denied, PERMISSION_REQUEST_CODE_WRITE_STORAGE .");
-                }
-                break;
-            case PERMISSION_REQUEST_CODE_READ_STORAGE:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Log.e("value", "Permission Granted, PERMISSION_REQUEST_CODE_READ_STORAGE .");
-                } else {
-                    Log.e("value", "Permission Denied, PERMISSION_REQUEST_CODE_READ_STORAGE .");
-                }
-                break;
+        Log.e(TAG, "grantResults : " + grantResults);
+        Log.e(TAG, "permissions : " + permissions);
+        Log.e(TAG, "requestCode : " + requestCode);
+        if (requestCode == 100) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+            }
+            return;
         }
     }
 
-    public void openApplicationSettings() {
-        Intent appSettingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.parse("package:" + getPackageName()));
-        startActivityForResult(appSettingsIntent, PERMISSION_REQUEST_CODE_WRITE_STORAGE);
-    }
 
 }
