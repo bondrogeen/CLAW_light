@@ -4,6 +4,10 @@
 
         <SwitchPreference
             android:defaultValue="false"
+            android:key="general_key"
+            android:title="Key" />
+        <SwitchPreference
+            android:defaultValue="false"
             android:key="general_item"
             android:title="Item" />
         <SwitchPreference
@@ -22,10 +26,6 @@
             android:defaultValue="false"
             android:key="general_call"
             android:title=" Incoming calls" />
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="general_key"
-            android:title="Key" />
     </PreferenceCategory>
     <PreferenceCategory android:title="Other">
         <ListPreference

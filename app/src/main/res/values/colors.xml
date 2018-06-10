@@ -15,6 +15,9 @@
     <color name="green">#49cc56</color>
     <color name="white">#FFFFFF</color>
     <color name="red">#ca1515</color>
+    <color name="primary_material_dark_1">#ff7979</color>
+    <color name="primary_material_dark_2">#da4949</color>
+    <color name="primary_material_dark_3">#99fffefe</color>
 
 
 </resources>

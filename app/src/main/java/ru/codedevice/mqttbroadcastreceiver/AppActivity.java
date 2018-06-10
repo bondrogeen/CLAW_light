@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -30,11 +31,14 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
+import com.afollestad.materialdialogs.Theme;
+import com.afollestad.materialdialogs.color.ColorChooserDialog;
 import com.diegodobelo.expandingview.ExpandingItem;
 import com.diegodobelo.expandingview.ExpandingList;
 
@@ -43,13 +47,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static android.view.View.*;
 
-public class AppActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+public class AppActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, ColorChooserDialog.ColorCallback {
 
     String TAG = "AppActivity";
     private ExpandingList mExpandingList;
@@ -66,6 +71,11 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     Boolean general_call = false;
     Boolean permission_two = false;
 
+    String mqtt_firs_topic = "";
+    String mqtt_device = "";
+
+    int dialog_color = Color.RED;
+
     String[] PERMISSION_CALL = new String[]{
             Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.READ_CONTACTS
@@ -74,14 +84,33 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.READ_CONTACTS
     };
+    String[] PERMISSION_SMS_AND_CALL = new String[]{
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_CONTACTS,
+            Manifest.permission.READ_PHONE_STATE
+    };
+
     String[] PERMISSION_STORAGE = new String[]{
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
 
 
-    final int PERMISSION_REQUEST_CODE_WRITE_STORAGE = 1;
-    final int PERMISSION_REQUEST_CODE_READ_STORAGE = 2;
+    final int PERMISSION_REQUEST_CODE_STORAGE = 1;
+    final int PERMISSION_REQUEST_CODE_SMS = 2;
+    final int PERMISSION_REQUEST_CODE_CALL = 3;
+    final int PERMISSION_REQUEST_CODE_SMS_AND_CALL = 4;
+
+    @Override
+    public void onColorSelection(@NonNull ColorChooserDialog dialog, int selectedColor) {
+        Log.d(TAG, "selectedColor : " + selectedColor);
+        dialog_color = selectedColor;
+    }
+
+    @Override
+    public void onColorChooserDismissed(@NonNull ColorChooserDialog dialog) {
+
+    }
 
     interface OnItemCreated {
         void itemCreated(String title);
@@ -99,7 +128,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         fab.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(checkPermissions(PERMISSION_STORAGE)){
+                if(checkPermissions(PERMISSION_STORAGE,PERMISSION_REQUEST_CODE_STORAGE)){
                     createElementItem();
                 }
             }
@@ -117,7 +146,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
 
         initSettings();
 
-        if(checkPermissions(PERMISSION_STORAGE)){
+        if(checkPermissions(PERMISSION_STORAGE, PERMISSION_REQUEST_CODE_STORAGE)){
             createItems();
         }
     }
@@ -125,37 +154,67 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     @Override
     protected void onStart() {
         super.onStart();
-        Log.d(TAG, "MainActivity: onStart()");
+        Log.d(TAG, "AppActivity: onStart()");
         initSettings();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "MainActivity: onResume()");
+        Log.d(TAG, "AppActivity: onResume()");
 
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Log.d(TAG, "MainActivity: onPause()");
+        Log.d(TAG, "AppActivity: onPause()");
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        Log.d(TAG, "MainActivity: onStop()");
+        Log.d(TAG, "AppActivity: onStop()");
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "MainActivity: onDestroy()");
+        Log.d(TAG, "AppActivity: onDestroy()");
         if(dialog!=null){
             dialog.dismiss();
         }
 
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data){
+        Log.e(TAG, "onActivityResult requestCode : " + requestCode);
+        Log.e(TAG, "onActivityResult resultCode : " + resultCode);
+        if (requestCode == PERMISSION_REQUEST_CODE_STORAGE) {
+            Log.e(TAG, "onActivityResult resultCode : PERMISSION_REQUEST_CODE_STORAGE");
+            if(checkPermissionsTwo(PERMISSION_STORAGE,PERMISSION_REQUEST_CODE_STORAGE)){
+                createItems();
+            }
+        }
+        else if (requestCode == PERMISSION_REQUEST_CODE_CALL) {
+            Log.e(TAG, "onActivityResult resultCode : PERMISSION_REQUEST_CODE_CALL");
+            if(checkPermissionsTwo(PERMISSION_STORAGE,PERMISSION_REQUEST_CODE_CALL)){
+                initSettings();
+            }
+        }
+        else if (requestCode == PERMISSION_REQUEST_CODE_SMS) {
+            Log.e(TAG, "onActivityResult resultCode : PERMISSION_REQUEST_CODE_SMS");
+            if(checkPermissionsTwo(PERMISSION_STORAGE,PERMISSION_REQUEST_CODE_SMS)){
+                initSettings();
+            }
+        }
+        else if (requestCode == PERMISSION_REQUEST_CODE_SMS_AND_CALL) {
+            Log.e(TAG, "onActivityResult resultCode : PERMISSION_REQUEST_CODE_SMS_AND_CALL");
+            if(checkPermissionsTwo(PERMISSION_SMS_AND_CALL,PERMISSION_REQUEST_CODE_SMS_AND_CALL)){
+                initSettings();
+            }
+        }
     }
 
     public void initSettings(){
@@ -164,22 +223,27 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         general_key = settings.getBoolean("general_key", false);
         general_sms = settings.getBoolean("general_sms", false);
         general_call = settings.getBoolean("general_call", false);
+        mqtt_device = settings.getString("mqtt_device", "");
+        mqtt_firs_topic = settings.getString("mqtt_first_topic", "");
 
-        if (general_sms){
-            if(!checkPermissions(PERMISSION_SMS)){
-                general_sms = false;
-                editor.putBoolean("general_sms",general_sms);
-                editor.apply();
-            }
-        }
-        if (general_call){
-            if(!checkPermissions(PERMISSION_CALL)){
-                general_call = false;
-                editor.putBoolean("general_call",general_call);
-                editor.apply();
-            }
+        if (mqtt_device==null || mqtt_device.equals("")) {
+            mqtt_device = Build.MODEL;
+            mqtt_device = mqtt_device.replaceAll("\\s+","_");
+            mqtt_device = mqtt_device.replaceAll("/","_");
+            editor.putString("mqtt_device", mqtt_device);
+            editor.apply();
         }
 
+        if (general_sms && general_call){
+            checkPermissions(PERMISSION_SMS_AND_CALL, PERMISSION_REQUEST_CODE_SMS_AND_CALL);
+        }else{
+            if (general_sms){
+                checkPermissions(PERMISSION_SMS, PERMISSION_REQUEST_CODE_SMS);
+            }
+            if (general_call){
+                checkPermissions(PERMISSION_CALL, PERMISSION_REQUEST_CODE_CALL);
+            }
+        }
     }
 
 
@@ -332,13 +396,12 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             Log.d(TAG, "allArray == null : ");
             allArray = new JSONArray();
             try {
-                subObject.put("name","First");
-                subObject.put("topic","first");
+                subObject.put("name","Light");
+                subObject.put("topic","light");
                 subArray.put(subObject);
-                mainObject.put("name","RoomNew");
-                mainObject.put("topic","room");
-                mainObject.put("color", R.color.blue);
-                mainObject.put("icon",R.drawable.ic_ghost);
+                mainObject.put("name","Holl");
+                mainObject.put("topic","holl");
+                mainObject.put("color", Color.RED);
                 mainObject.put("subArray",subArray);
                 allArray.put(mainObject);
 
@@ -360,7 +423,6 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     private void addItemObject(JSONObject obj) {
         final ExpandingItem item = mExpandingList.createNewItem(R.layout.expanding_layout);
         int itemColor = R.color.purple;
-        int itemIcon = R.drawable.ic_ghost;
         String itemName = "Room";
         String itemTopic = "room";
         JSONArray subArray = null;
@@ -368,7 +430,6 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         if (item != null && obj != null) {
             try {
                 itemColor = obj.getInt("color");
-                itemIcon = obj.getInt("icon");
                 itemName = obj.getString("name");
                 itemTopic = obj.getString("topic");
                 if(obj.has("subArray")){
@@ -379,8 +440,8 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-            item.setIndicatorColorRes(itemColor);
-            item.setIndicatorIconRes(itemIcon);
+            item.setIndicatorColor(itemColor);
+//            item.setIndicatorIcon();
             TextView tit = item.findViewById(R.id.title);
             tit.setOnClickListener(new OnClickListener() {
                 @Override
@@ -397,7 +458,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                     dialog = new MaterialDialog.Builder(AppActivity.this)
                             .title(tit.getText())
                             .positiveText("Delete")
-                            .negativeText("Create")
+                            .negativeText("Create sub item")
                             .onPositive(new MaterialDialog.SingleButtonCallback() {
                                 @Override
                                 public void onClick(MaterialDialog dialog, DialogAction which) {
@@ -457,20 +518,15 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                 View customView;
                 Button button_on;
                 Button button_off;
-//                Button button_true;
-//                Button button_false;
                 MaterialDialog dialog = new MaterialDialog.Builder(AppActivity.this)
                         .title(subName)
                         .customView(R.layout.material_dialog_button, true)
+                        .theme(Theme.DARK)
                         .build();
                 customView = dialog.getCustomView();
                 assert customView != null;
                 button_on = customView.findViewById(R.id.button_on);
                 button_off = customView.findViewById(R.id.button_off);
-//                button_on.setBackgroundColor(Color.GREEN);
-//                button_on.setTextColor(Color.WHITE);
-//                button_off.setBackgroundColor(Color.RED);
-//                button_off.setTextColor(Color.WHITE);
                 button_off.setOnClickListener(new OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -551,6 +607,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         EditText name;
         EditText topic;
         Button button;
+        ImageView ColorChooser;
         dialog = new MaterialDialog.Builder(AppActivity.this)
                 .title("Add a new category")
                 .customView(R.layout.material_dialog_custom_view, true)
@@ -560,9 +617,19 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         assert customView != null;
         name = customView.findViewById(R.id.textName);
         topic = customView.findViewById(R.id.textTopic);
-
-
         button = customView.findViewById(R.id.buttonOk);
+        ColorChooser = customView.findViewById(R.id.ColorChooser);
+
+        ColorChooser.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                new ColorChooserDialog.Builder(AppActivity.this, R.string.color_palette)
+                        .allowUserColorInput(false)
+                        .dynamicButtonColor(false)
+                        .show(AppActivity.this);
+            }
+        });
+
         button.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -583,8 +650,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                         JSONObject newObj = new JSONObject();
                         newObj.put("name", name.getText());
                         newObj.put("topic", topic.getText());
-                        newObj.put("color", R.color.blue);
-                        newObj.put("icon", R.drawable.ic_ghost);
+                        newObj.put("color", dialog_color);
                         newObj.put("subArray", new JSONArray());
                         allArray.put(newObj);
                         Storage.putArr("allArray", allArray);
@@ -613,7 +679,8 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         View customView;
         EditText name;
         EditText topic;
-        Button button;
+        Button buttonOk;
+        ImageView ColorChooser;
         MaterialDialog dialog = new MaterialDialog.Builder(AppActivity.this)
                 .title("Add a new sub item")
                 .customView(R.layout.material_dialog_custom_view, true)
@@ -622,10 +689,10 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         assert customView != null;
         name = customView.findViewById(R.id.textName);
         topic = customView.findViewById(R.id.textTopic);
-        button = customView.findViewById(R.id.buttonOk);
-
-
-        button.setOnClickListener(new OnClickListener() {
+        buttonOk = customView.findViewById(R.id.buttonOk);
+        ColorChooser = customView.findViewById(R.id.ColorChooser);
+        ColorChooser.setVisibility(View.GONE);
+        buttonOk.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 String topicText = String.valueOf(topic.getText());
@@ -751,7 +818,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         dialog.show();
     }
 
-    private boolean checkPermissions(String[] permissions) {
+    private boolean checkPermissions(String[] permissions , int requestCode) {
         if (Build.VERSION.SDK_INT >= 23) {
             int result;
             List<String> listPermissionsNeeded = new ArrayList<>();
@@ -762,25 +829,50 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                 }
             }
             if (!listPermissionsNeeded.isEmpty()) {
-                ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]), 100);
+                ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]), requestCode);
                 return false;
             }
         }
         return true;
     }
 
-    private void requestPermission() {
+    private boolean checkPermissionsTwo(String[] permissions , int requestCode) {
+        if (Build.VERSION.SDK_INT >= 23) {
+            int result;
+            List<String> listPermissionsNeeded = new ArrayList<>();
+            for (String p : permissions) {
+                result = ContextCompat.checkSelfPermission(this, p);
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    listPermissionsNeeded.add(p);
+                }
+            }
+            if (!listPermissionsNeeded.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void requestPermission(String text, int requestCode) {
         if(permission_two) {
             dialog = new MaterialDialog.Builder(this)
                     .title("Permission")
-                    .content("In order to use this function, you must provide a permission.")
+                    .content(text)
                     .positiveText("OK")
+                    .negativeText("CANCEL")
                     .onPositive(new MaterialDialog.SingleButtonCallback() {
                         @Override
                         public void onClick(MaterialDialog dialog, DialogAction which) {
-                            Intent appSettingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                                     Uri.parse("package:" + getPackageName()));
-                            startActivityForResult(appSettingsIntent, 100);
+                            Log.e(TAG, "requestCode : " + requestCode);
+                            AppActivity.this.startActivityForResult(i, requestCode);
+                        }
+                    })
+                    .onNegative(new MaterialDialog.SingleButtonCallback() {
+                        @Override
+                        public void onClick(MaterialDialog dialog, DialogAction which) {
+
                         }
                     })
                     .show();
@@ -791,17 +883,34 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        Log.e(TAG, "grantResults : " + grantResults);
-        Log.e(TAG, "permissions : " + permissions);
+        Log.e(TAG, String.format("grantResults : %s", grantResults));
+        Log.e(TAG, "permissions : " + Arrays.toString(permissions));
         Log.e(TAG, "requestCode : " + requestCode);
-        if (requestCode == 100) {
-            if (grantResults.length > 0
-                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
+        if (requestCode == PERMISSION_REQUEST_CODE_STORAGE) {
+            if (checkPermissionsTwo(permissions,requestCode)) {
+                createItems();
+            }else{
+                requestPermission("In order to use this function, you need to grant access to storage",requestCode);
             }
             return;
         }
-    }
+        if (requestCode == PERMISSION_REQUEST_CODE_SMS) {
+            if (checkPermissionsTwo(permissions,requestCode)) {
 
+            }else{
+                requestPermission("In order to use this function, you need to give access to sms and contacts",requestCode);
+            }
+            return;
+        }
+        if (requestCode == PERMISSION_REQUEST_CODE_CALL) {
+            if (checkPermissionsTwo(permissions,requestCode)) {
+
+            }else{
+                requestPermission("In order to use this function, you need to give access to calls and contacts",requestCode);
+            }
+            return;
+        }
+
+    }
 
 }
