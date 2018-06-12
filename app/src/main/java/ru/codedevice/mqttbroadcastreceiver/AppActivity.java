@@ -1,6 +1,7 @@
 package ru.codedevice.mqttbroadcastreceiver;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -67,6 +68,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     JSONArray allArray = new JSONArray();
 
     Boolean general_key = false;
+    Boolean mqtt_run = false;
     Boolean general_sms = false;
     Boolean general_call = false;
     Boolean permission_two = false;
@@ -224,6 +226,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         general_sms = settings.getBoolean("general_sms", false);
         general_call = settings.getBoolean("general_call", false);
         mqtt_device = settings.getString("mqtt_device", "");
+        mqtt_run = settings.getBoolean("mqtt_run", false);
         mqtt_firs_topic = settings.getString("mqtt_first_topic", "");
 
         if (mqtt_device==null || mqtt_device.equals("")) {
@@ -302,6 +305,27 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             case R.id.nav_settings:
                 startActivity(new Intent(AppActivity.this, SettingsActivity.class));
                 break;
+            case R.id.nav_check:
+                if(mqtt_run){
+                    Intent i = new Intent(this, AppService.class);
+                    i.putExtra("statusInit","test");
+                    i.putExtra("topic","info/buttons/check");
+                    i.putExtra("value",true);
+                    startService(i);
+                }else{
+                    dialog = new MaterialDialog.Builder(this)
+                            .title("Check connections")
+                            .content("First, enable and configure MQTT")
+                            .positiveText("ok")
+                            .onPositive(new MaterialDialog.SingleButtonCallback() {
+                                @Override
+                                public void onClick(MaterialDialog dialog, DialogAction which) {
+                                    startActivity(new Intent(AppActivity.this, SettingsActivity.class));
+                                }
+                            })
+                            .show();
+                }
+                break;
             case R.id.nav_share:
                 Intent email = new Intent(Intent.ACTION_SEND);
                 email.putExtra(Intent.EXTRA_EMAIL, new String[]{"bondrogeen@gmail.com"});
@@ -311,8 +335,16 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                 startActivity(Intent.createChooser(email, "Select email client :"));
                 break;
             case R.id.nav_donate:
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=HYHDHXVH6UE3C"));
-                startActivity(browserIntent);
+//                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=HYHDHXVH6UE3C"));
+//                startActivity(browserIntent);
+                Intent intent = new Intent(Intent.ACTION_MAIN);
+                intent.setClassName("com.google.android.googlequicksearchbox",
+                        "com.google.android.googlequicksearchbox.VoiceSearchActivity");
+                try {
+                    startActivity(intent);
+                } catch (ActivityNotFoundException anfe) {
+                    Log.d(TAG, "Google Voice Search is not found");
+                }
                 break;
         }
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -599,7 +631,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     public boolean containsWhiteSpace(String str){
         Pattern pattern = Pattern.compile("\\s");
         Matcher matcher = pattern.matcher(str);
-        return (matcher.find() || str.length() == 0);
+        return (matcher.find() || str.length() == 0 ||  !str.matches("^[a-zA-Z0-9]+$"));
     }
 
     public void createElementItem(){

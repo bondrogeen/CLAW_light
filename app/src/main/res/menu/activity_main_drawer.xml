@@ -12,10 +12,10 @@
             <!--android:id="@+id/nav_gallery"-->
             <!--android:icon="@drawable/ic_menu_gallery"-->
             <!--android:title="Gallery" />-->
-        <!--<item-->
-            <!--android:id="@+id/nav_slideshow"-->
-            <!--android:icon="@drawable/ic_menu_slideshow"-->
-            <!--android:title="Slideshow" />-->
+        <item
+            android:id="@+id/nav_check"
+            android:icon="@drawable/ic_cloud_queue_black_24dp"
+            android:title="Check connections" />
         <item
             android:id="@+id/nav_settings"
             android:icon="@drawable/ic_menu_manage"
@@ -27,7 +27,7 @@
             <item
                 android:id="@+id/nav_share"
                 android:icon="@drawable/ic_menu_share"
-                android:title="Share" />
+                android:title="Report a bug" />
             <item
                 android:id="@+id/nav_donate"
                 android:icon="@drawable/ic_monetization_on_black_24dp"

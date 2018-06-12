@@ -123,6 +123,10 @@ public class AppService extends Service implements MqttCallback {
                     String key_value = intent.getStringExtra("value");
                     map.put("info/key/"+key, key_value);
                     break;
+                case "googleNow":
+                    String text = intent.getStringExtra("Text");
+                    map.put("info/googleNow/text", text.toLowerCase());
+                    break;
                 case "test":
                     map.put("info/buttons/check", "true");
                     test = true;

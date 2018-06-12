@@ -37,12 +37,20 @@ public class AppReceiver extends BroadcastReceiver {
 
         String action = intent.getAction();
         Log.i(TAG, "Action : " + action);
+
+
         i = new Intent(context, AppService.class);
 
         if (action.equals("android.intent.action.BOOT_COMPLETED")
             || action.equals("android.intent.action.QUICKBOOT_POWERON")
             || action.equals("com.htc.intent.action.QUICKBOOT_POWERON") ){
             i.putExtra("statusInit","boot");
+            context.startService(i);
+        }
+
+        if (action.equals("ru.codedevice.mqttbroadcastreceiver.AppReceiver")){
+            i.putExtras(intent);
+            i.putExtra("statusInit","googleNow");
             context.startService(i);
         }
 
