@@ -7,9 +7,11 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Build;
+import android.provider.Telephony;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
@@ -61,6 +63,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     private ExpandingList mExpandingList;
     MaterialDialog dialog;
     SharedPreferences settings;
+    android.content.BroadcastReceiver br;
 
     JSONObject mainObject = new JSONObject();
     JSONObject subObject =new JSONObject();
@@ -151,6 +154,11 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         if(checkPermissions(PERMISSION_STORAGE, PERMISSION_REQUEST_CODE_STORAGE)){
             createItems();
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Log.d(TAG, "event : ");
+            Intent intent = new Intent(AppActivity.this, AppOreoService.class);
+            startService(intent);
+        }
     }
 
     @Override
@@ -186,8 +194,13 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         if(dialog!=null){
             dialog.dismiss();
         }
+        if(br!=null){
+            unregisterReceiver(br);
+        }
 
     }
+
+
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data){
@@ -257,7 +270,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             intent.putExtra("statusInit", "key");
             Log.d(TAG, "event : " + event.getAction());
             int key = event.getKeyCode();
-            String value = String.valueOf(event.getAction());
+            String value = String.valueOf(event.getAction()==1);
             if (event.getRepeatCount() == 0) {
                 intent.putExtra("key", Variable.KEY[key]);
                 intent.putExtra("value", value);
@@ -431,8 +444,8 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                 subObject.put("name","Light");
                 subObject.put("topic","light");
                 subArray.put(subObject);
-                mainObject.put("name","Holl");
-                mainObject.put("topic","holl");
+                mainObject.put("name","Room");
+                mainObject.put("topic","room");
                 mainObject.put("color", Color.RED);
                 mainObject.put("subArray",subArray);
                 allArray.put(mainObject);
@@ -454,7 +467,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
 
     private void addItemObject(JSONObject obj) {
         final ExpandingItem item = mExpandingList.createNewItem(R.layout.expanding_layout);
-        int itemColor = R.color.purple;
+        int itemColor = Color.RED;
         String itemName = "Room";
         String itemTopic = "room";
         JSONArray subArray = null;

@@ -72,6 +72,7 @@ public class AppService extends Service implements MqttCallback {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand");
+
         if (intent != null && intent.getExtras() != null) {
             String status = intent.getStringExtra("statusInit");
             Log.d(TAG, "statusInit :" + status);
@@ -79,6 +80,7 @@ public class AppService extends Service implements MqttCallback {
                 case "battery":
                     String battery = intent.getStringExtra("status");
                     map.put("info/battery/status", battery);
+                    map.put("info/battery/level", String.valueOf(getBatteryLevel()));
                     break;
                 case "boot":
                     map.put("info/boot/status", "start");
@@ -94,6 +96,7 @@ public class AppService extends Service implements MqttCallback {
                         map.put("info/call/number", number);
                         map.put("info/call/name", name);
                     }
+                    map.put("info/battery/level", String.valueOf(getBatteryLevel()));
                     break;
                 case "sms":
                     String numberSms = intent.getStringExtra("number");
@@ -104,6 +107,7 @@ public class AppService extends Service implements MqttCallback {
                     map.put("info/sms/number", numberSms);
                     map.put("info/sms/text", textSms);
                     map.put("info/sms/name", name);
+                    map.put("info/battery/level", String.valueOf(getBatteryLevel()));
                     break;
                 case "buttons":
                     String button = intent.getStringExtra("button");
@@ -137,6 +141,7 @@ public class AppService extends Service implements MqttCallback {
                     String ssid = info.getSSID();
                     Log.d(TAG, "ssid :" + ssid);
                     map.put("info/wifi/ssid", ssid);
+                    map.put("info/battery/level", String.valueOf(getBatteryLevel()));
                     break;
                 case "power":
                     String power = intent.getStringExtra("power");
@@ -158,13 +163,13 @@ public class AppService extends Service implements MqttCallback {
                     }
                     map.put("info/battery/level", String.valueOf(level));
                     int voltage = intent.getIntExtra("voltage", -1);
-                    map.put("info/battery/voltage", String.valueOf(voltage));
+                    map.put("info/battery/voltage", String.valueOf((float) voltage/1000));
                     int plugtype = intent.getIntExtra("plugged", -1);
                     String type = "";
                     if(plugtype==0){
                         type = "none";
                     }else if(plugtype==1){
-                        type = "charging";
+                        type = "ac";
                     }else if(plugtype==2){
                         type = "usb";
                     }else{
@@ -172,9 +177,9 @@ public class AppService extends Service implements MqttCallback {
                     }
                     map.put("info/battery/plugtype", type);
                     int health = intent.getIntExtra("health", -1);
-                    map.put("info/battery/health", String.valueOf(health));
+                    map.put("info/battery/health", String.valueOf(Variable.BATTERY_HEALTH[health]));
                     int temperature = intent.getIntExtra("temperature", -1);
-                    map.put("info/battery/temperature", String.valueOf(temperature));
+                    map.put("info/battery/temperature", String.valueOf((float) temperature/10));
                     break;
             }
         }
@@ -188,6 +193,12 @@ public class AppService extends Service implements MqttCallback {
             stopSelf();
         }
         return super.onStartCommand(intent, flags, startId);
+    }
+
+    public float getBatteryLevel() {
+        Intent batteryIntent = registerReceiver(null, new     IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        int level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        return level;
     }
 
     @Override

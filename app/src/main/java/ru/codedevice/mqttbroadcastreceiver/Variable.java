@@ -18,4 +18,7 @@ public final class Variable {
             "KEYCODE_MEDIA_NEXT", "KEYCODE_MEDIA_PREVIOUS", "KEYCODE_MEDIA_REWIND", "KEYCODE_MEDIA_FAST_FORWARD",
             "KEYCODE_MUTE", "KEYCODE_PAGE_UP", "KEYCODE_PAGE_DOWN", "KEYCODE_PICTSYMBOLS"
     };
+    public static String BATTERY_HEALTH[] = {"unknown","unknown","good","overhead","dead","over_voltage","unspecified_failure","cold"
+
+    };
 }
