@@ -106,6 +106,25 @@ public class AppReceiver extends BroadcastReceiver {
 
         }
 
+        if (action.equals("ActionReceiverWidget")) {
+            String widgetId = "null";
+            String widgetName = "null";
+            String widgetValue = "null";
+            String widgetType = "null";
+            try {
+                widgetId = intent.getStringExtra("widgetId");
+                widgetName = intent.getStringExtra("widgetName");
+                widgetType = intent.getStringExtra("widgetType");
+            } catch (NullPointerException e) {
+                Log.e(TAG, "msg = null");
+            }
+            i.putExtra("statusInit","widget");
+            i.putExtra("widgetName",widgetName);
+            i.putExtra("widgetType",widgetType);
+            i.putExtra("widgetId",widgetId);
+            context.startService(i);
+        }
+
         if (action.equals("android.intent.action.BATTERY_CHANGED") && general_battery){
             i.putExtras(intent);
             i.putExtra("statusInit","batteryInfo");

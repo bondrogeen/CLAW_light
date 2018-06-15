@@ -45,4 +45,6 @@
     <string name="nav_header_desc">Navigation header</string>
     <string name="enter_title">title</string>
     <string name="color_palette">Color</string>
+    <string name="appwidget_text">EXAMPLE</string>
+    <string name="add_widget">Add widget</string>
 </resources>

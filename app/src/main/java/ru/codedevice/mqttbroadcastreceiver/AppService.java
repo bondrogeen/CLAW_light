@@ -1,6 +1,7 @@
 package ru.codedevice.mqttbroadcastreceiver;
 
 import android.app.Service;
+import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
 import android.content.ContentUris;
 import android.content.Context;
@@ -28,6 +29,8 @@ import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -60,6 +63,17 @@ public class AppService extends Service implements MqttCallback {
     String list_general_full_battery;
     Map<String, String> map;
 
+    JSONObject wedgetNameJSON;
+    JSONObject allWedgetJSON;
+
+    String widgetName;
+    String widgetId;
+    String widgetType;
+    String widgetValue;
+    String widgetText;
+    String widgetTitle;
+    SharedPreferences sp;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -67,6 +81,7 @@ public class AppService extends Service implements MqttCallback {
         initSettings();
         initMQTT();
         map = new HashMap<String, String>();
+        sp = getSharedPreferences(ConfigWidget.WIDGET_PREF, MODE_PRIVATE);
     }
 
     @Override
@@ -76,7 +91,7 @@ public class AppService extends Service implements MqttCallback {
         if (intent != null && intent.getExtras() != null) {
             String status = intent.getStringExtra("statusInit");
             Log.d(TAG, "statusInit :" + status);
-            switch (status) {
+             switch (status) {
                 case "battery":
                     String battery = intent.getStringExtra("status");
                     map.put("info/battery/status", battery);
@@ -181,6 +196,54 @@ public class AppService extends Service implements MqttCallback {
                     int temperature = intent.getIntExtra("temperature", -1);
                     map.put("info/battery/temperature", String.valueOf((float) temperature/10));
                     break;
+                 case "widget":
+                     widgetName = intent.getStringExtra("widgetName");
+                     widgetId = intent.getStringExtra("widgetId");
+                     widgetType = intent.getStringExtra("widgetType");
+                     widgetValue = sp.getString(ConfigWidget.WIDGET_KEY_VALUE + widgetId, "false");
+                     map.put("info/widget/"+widgetName, widgetValue);
+
+                     SharedPreferences.Editor editor = sp.edit();
+                     widgetValue = (widgetValue.equals("false") ? "true" : "false");
+                     Log.e(TAG, "AppMqttService widgetValue revirs = " + widgetValue);
+                     editor.putString(ConfigWidget.WIDGET_KEY_VALUE + widgetId, widgetValue);
+                     editor.apply();
+
+                     AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(this);
+                     AppWidgetOne.updateAppWidget(this, appWidgetManager, Integer.parseInt(widgetId), sp);
+
+                     break;
+                 case "widget_create":
+                     widgetName = intent.getStringExtra("widgetName");
+
+                     try {
+//                        wedgetNameJSON = AppWidgetOne.allWidget.getJSONObject(widgetName);
+                         wedgetNameJSON = Storage.get("allWidget").getJSONObject(widgetName);
+                         widgetId = wedgetNameJSON.getString("ID");
+                         widgetType = wedgetNameJSON.getString("TYPE");
+                         widgetText = wedgetNameJSON.getString("TEXT");
+                     } catch (JSONException e) {
+                         e.printStackTrace();
+                     }
+
+                     Log.e(TAG, "AppMqttService widgetId = " + widgetId);
+                     Log.e(TAG, "AppMqttService widgetName = " + widgetName);
+                     Log.e(TAG, "AppMqttService widgetType = " + widgetType);
+                     Log.e(TAG, "AppMqttService widgetText = " + widgetText);
+
+                     widgetValue = sp.getString(ConfigWidget.WIDGET_KEY_VALUE + widgetId, "false");
+                     widgetTitle = sp.getString(ConfigWidget.WIDGET_KEY_TITLE + widgetId, "false");
+                     if (MQTTclient.isConnected()) {
+                         if (widgetType.equals(ConfigWidget.WIDGET_TYPE_TEXT_AND_TITLE)) {
+//                             publish("comm/widget/" + widgetName + "/text", widgetText);
+//                             publish("comm/widget/" + widgetName + "/title", widgetTitle);
+                         }
+                         if (widgetType.equals(ConfigWidget.WIDGET_TYPE_BUTTON)) {
+//                             publish("comm/widget/" + widgetName + "/button", widgetValue);
+//                             publish("comm/widget/" + widgetName + "/title", widgetTitle);
+                         }
+                     }
+                     break;
             }
         }
         if(mqtt_run) {

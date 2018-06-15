@@ -28,6 +28,8 @@ public class Storage {
 //        }
     }
 
+
+
     private static File create(String dir){
         File dirDirectory = null;
         if (isExternalStorageWritable()){
@@ -57,6 +59,29 @@ public class Storage {
     }
 
     public static JSONObject getObj(String key){
+        File file = new File(new File(path+"/json"), key+".json");
+        JSONObject jsonObj = null;
+        if(file.exists()) {
+            Log.v(TAG, "file.exists()");
+            try {
+                jsonObj = new JSONObject(readFile(file));
+                Log.v(TAG, "jsonObj"+jsonObj);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return jsonObj;
+    }
+
+    public static void put(String key, JSONObject obj){
+        File dir = create("json");
+        if (dir!=null){
+            File file = new File(dir, key+".json");
+            writeFile(file,obj.toString());
+        }
+    }
+
+    public static JSONObject get(String key){
         File file = new File(new File(path+"/json"), key+".json");
         JSONObject jsonObj = null;
         if(file.exists()) {
