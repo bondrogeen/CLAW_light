@@ -1,5 +1,6 @@
 package ru.codedevice.mqttbroadcastreceiver;
 
+import android.Manifest;
 import android.app.Service;
 import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
@@ -8,7 +9,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -16,7 +20,9 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.provider.CallLog;
 import android.provider.ContactsContract;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -87,11 +93,10 @@ public class AppService extends Service implements MqttCallback {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand");
-
         if (intent != null && intent.getExtras() != null) {
             String status = intent.getStringExtra("statusInit");
             Log.d(TAG, "statusInit :" + status);
-             switch (status) {
+            switch (status) {
                 case "battery":
                     String battery = intent.getStringExtra("status");
                     map.put("info/battery/status", battery);
@@ -105,9 +110,12 @@ public class AppService extends Service implements MqttCallback {
                     String callStatus = intent.getStringExtra("type");
                     Log.e(TAG, "callStatus   :  " + callStatus);
 
+                    if(callStatus.equals("disconnection")){
+                        callList();
+                    }
                     map.put("info/call/status", callStatus);
-                    if(number != null){
-                        String name = uploadContactPhoto(this,number);
+                    if (number != null) {
+                        String name = uploadContactPhoto(this, number);
                         map.put("info/call/number", number);
                         map.put("info/call/name", name);
                     }
@@ -118,7 +126,7 @@ public class AppService extends Service implements MqttCallback {
                     String textSms = intent.getStringExtra("text");
                     Log.e(TAG, "numberSms   :  " + numberSms);
                     Log.e(TAG, "textSms   :  " + textSms);
-                    String name = uploadContactPhoto(this,numberSms);
+                    String name = uploadContactPhoto(this, numberSms);
                     map.put("info/sms/number", numberSms);
                     map.put("info/sms/text", textSms);
                     map.put("info/sms/name", name);
@@ -126,7 +134,7 @@ public class AppService extends Service implements MqttCallback {
                     break;
                 case "buttons":
                     String button = intent.getStringExtra("button");
-                    map.put("info/buttons/"+button, "true");
+                    map.put("info/buttons/" + button, "true");
                     break;
                 case "item":
                     String val = intent.getStringExtra("value");
@@ -134,13 +142,13 @@ public class AppService extends Service implements MqttCallback {
                     map.put("info/item/" + topic, val);
                     break;
                 case "seekbar":
-                    int value = intent.getIntExtra("value",0);
+                    int value = intent.getIntExtra("value", 0);
                     map.put("info/buttons/seekbar", String.valueOf(value));
                     break;
                 case "key":
                     String key = intent.getStringExtra("key");
                     String key_value = intent.getStringExtra("value");
-                    map.put("info/key/"+key, key_value);
+                    map.put("info/key/" + key, key_value);
                     break;
                 case "googleNow":
                     String text = intent.getStringExtra("Text");
@@ -151,8 +159,8 @@ public class AppService extends Service implements MqttCallback {
                     test = true;
                     break;
                 case "wifi":
-                    WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService (Context.WIFI_SERVICE);
-                    WifiInfo info = wifiManager.getConnectionInfo ();
+                    WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                    WifiInfo info = wifiManager.getConnectionInfo();
                     String ssid = info.getSSID();
                     Log.d(TAG, "ssid :" + ssid);
                     map.put("info/wifi/ssid", ssid);
@@ -161,105 +169,105 @@ public class AppService extends Service implements MqttCallback {
                 case "power":
                     String power = intent.getStringExtra("power");
                     map.put("info/battery/charging", power);
-                    if(power.equals("connected")){
+                    if (power.equals("connected")) {
                         initBroadReceiver();
                         noDestroy = true;
-                    }else {
+                    } else {
                         noDestroy = false;
                     }
                     break;
                 case "batteryInfo":
                     int level = intent.getIntExtra("level", -1);
                     list_general_full_battery = settings.getString("list_general_full_battery", "100");
-                    int setting_full_battery  = Integer.parseInt(list_general_full_battery);
-                    if(level >= setting_full_battery && only_one){
+                    int setting_full_battery = Integer.parseInt(list_general_full_battery);
+                    if (level >= setting_full_battery && only_one) {
                         map.put("info/battery/status", "ok");
                         only_one = false;
                     }
                     map.put("info/battery/level", String.valueOf(level));
                     int voltage = intent.getIntExtra("voltage", -1);
-                    map.put("info/battery/voltage", String.valueOf((float) voltage/1000));
+                    map.put("info/battery/voltage", String.valueOf((float) voltage / 1000));
                     int plugtype = intent.getIntExtra("plugged", -1);
                     String type = "";
-                    if(plugtype==0){
+                    if (plugtype == 0) {
                         type = "none";
-                    }else if(plugtype==1){
+                    } else if (plugtype == 1) {
                         type = "ac";
-                    }else if(plugtype==2){
+                    } else if (plugtype == 2) {
                         type = "usb";
-                    }else{
+                    } else {
                         type = String.valueOf(plugtype);
                     }
                     map.put("info/battery/plugtype", type);
                     int health = intent.getIntExtra("health", -1);
                     map.put("info/battery/health", String.valueOf(Variable.BATTERY_HEALTH[health]));
                     int temperature = intent.getIntExtra("temperature", -1);
-                    map.put("info/battery/temperature", String.valueOf((float) temperature/10));
+                    map.put("info/battery/temperature", String.valueOf((float) temperature / 10));
                     break;
-                 case "widget":
-                     widgetName = intent.getStringExtra("widgetName");
-                     widgetId = intent.getStringExtra("widgetId");
-                     widgetType = intent.getStringExtra("widgetType");
-                     widgetValue = sp.getString(ConfigWidget.WIDGET_KEY_VALUE + widgetId, "false");
-                     map.put("info/widget/"+widgetName, widgetValue);
+                case "widget":
+                    widgetName = intent.getStringExtra("widgetName");
+                    widgetId = intent.getStringExtra("widgetId");
+                    widgetType = intent.getStringExtra("widgetType");
+                    widgetValue = sp.getString(ConfigWidget.WIDGET_KEY_VALUE + widgetId, "false");
+                    map.put("info/widget/" + widgetName, widgetValue);
 
-                     SharedPreferences.Editor editor = sp.edit();
-                     widgetValue = (widgetValue.equals("false") ? "true" : "false");
-                     Log.e(TAG, "AppMqttService widgetValue revirs = " + widgetValue);
-                     editor.putString(ConfigWidget.WIDGET_KEY_VALUE + widgetId, widgetValue);
-                     editor.apply();
+                    SharedPreferences.Editor editor = sp.edit();
+                    widgetValue = (widgetValue.equals("false") ? "true" : "false");
+                    Log.e(TAG, "AppMqttService widgetValue revirs = " + widgetValue);
+                    editor.putString(ConfigWidget.WIDGET_KEY_VALUE + widgetId, widgetValue);
+                    editor.apply();
 
-                     AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(this);
-                     AppWidgetOne.updateAppWidget(this, appWidgetManager, Integer.parseInt(widgetId), sp);
+                    AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(this);
+                    AppWidgetOne.updateAppWidget(this, appWidgetManager, Integer.parseInt(widgetId), sp);
 
-                     break;
-                 case "widget_create":
-                     widgetName = intent.getStringExtra("widgetName");
+                    break;
+                case "widget_create":
+                    widgetName = intent.getStringExtra("widgetName");
 
-                     try {
+                    try {
 //                        wedgetNameJSON = AppWidgetOne.allWidget.getJSONObject(widgetName);
-                         wedgetNameJSON = Storage.get("allWidget").getJSONObject(widgetName);
-                         widgetId = wedgetNameJSON.getString("ID");
-                         widgetType = wedgetNameJSON.getString("TYPE");
-                         widgetText = wedgetNameJSON.getString("TEXT");
-                     } catch (JSONException e) {
-                         e.printStackTrace();
-                     }
+                        wedgetNameJSON = Storage.get("allWidget").getJSONObject(widgetName);
+                        widgetId = wedgetNameJSON.getString("ID");
+                        widgetType = wedgetNameJSON.getString("TYPE");
+                        widgetText = wedgetNameJSON.getString("TEXT");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
 
-                     Log.e(TAG, "AppMqttService widgetId = " + widgetId);
-                     Log.e(TAG, "AppMqttService widgetName = " + widgetName);
-                     Log.e(TAG, "AppMqttService widgetType = " + widgetType);
-                     Log.e(TAG, "AppMqttService widgetText = " + widgetText);
+                    Log.e(TAG, "AppMqttService widgetId = " + widgetId);
+                    Log.e(TAG, "AppMqttService widgetName = " + widgetName);
+                    Log.e(TAG, "AppMqttService widgetType = " + widgetType);
+                    Log.e(TAG, "AppMqttService widgetText = " + widgetText);
 
-                     widgetValue = sp.getString(ConfigWidget.WIDGET_KEY_VALUE + widgetId, "false");
-                     widgetTitle = sp.getString(ConfigWidget.WIDGET_KEY_TITLE + widgetId, "false");
-                     if (MQTTclient.isConnected()) {
-                         if (widgetType.equals(ConfigWidget.WIDGET_TYPE_TEXT_AND_TITLE)) {
+                    widgetValue = sp.getString(ConfigWidget.WIDGET_KEY_VALUE + widgetId, "false");
+                    widgetTitle = sp.getString(ConfigWidget.WIDGET_KEY_TITLE + widgetId, "false");
+                    if (MQTTclient.isConnected()) {
+                        if (widgetType.equals(ConfigWidget.WIDGET_TYPE_TEXT_AND_TITLE)) {
 //                             publish("comm/widget/" + widgetName + "/text", widgetText);
 //                             publish("comm/widget/" + widgetName + "/title", widgetTitle);
-                         }
-                         if (widgetType.equals(ConfigWidget.WIDGET_TYPE_BUTTON)) {
+                        }
+                        if (widgetType.equals(ConfigWidget.WIDGET_TYPE_BUTTON)) {
 //                             publish("comm/widget/" + widgetName + "/button", widgetValue);
 //                             publish("comm/widget/" + widgetName + "/title", widgetTitle);
-                         }
-                     }
-                     break;
+                        }
+                    }
+                    break;
             }
         }
-        if(mqtt_run) {
+        if (mqtt_run) {
             if (!MQTTclient.isConnected()) {
                 connectMQTT();
             } else {
                 sendData();
             }
-        }else{
+        } else {
             stopSelf();
         }
         return super.onStartCommand(intent, flags, startId);
     }
 
     public float getBatteryLevel() {
-        Intent batteryIntent = registerReceiver(null, new     IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         int level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
         return level;
     }
@@ -273,6 +281,39 @@ public class AppService extends Service implements MqttCallback {
         IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         br = new AppReceiver();
         registerReceiver(br, filter);
+    }
+
+    public void callList() {
+        String[] projection = new String[]{CallLog.Calls._ID,CallLog.Calls.DATE,CallLog.Calls.NUMBER,CallLog.Calls.NEW, CallLog.Calls.TYPE};
+        String where = "";
+
+        int missed = 0;
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        Cursor cursor = this.getContentResolver().query(CallLog.Calls.CONTENT_URI,projection,where,null,null
+        );
+
+        if (cursor.moveToFirst()) {
+            do {
+                long _id = cursor.getLong(cursor.getColumnIndex(CallLog.Calls._ID));
+                String number = cursor.getString(cursor.getColumnIndex(CallLog.Calls.NUMBER));
+                long date = cursor.getLong(cursor.getColumnIndex(CallLog.Calls.DATE));
+                long type = cursor.getLong(cursor.getColumnIndex(CallLog.Calls.TYPE));
+                long newCall = cursor.getLong(cursor.getColumnIndex(CallLog.Calls.NEW));
+                if (type == CallLog.Calls.MISSED_TYPE && newCall != 0){
+                    missed = missed + 1;
+                    Log.d(TAG, "number : " + number + "  type : " + type);
+                    Log.d(TAG, "newCall : " + newCall);
+                }
+            } while (cursor.moveToNext());
+        }
+        if (!cursor.isClosed()) {
+            cursor.close();
+        }
+
+        map.put("info/call/missed", String.valueOf(missed));
     }
 
     @Override

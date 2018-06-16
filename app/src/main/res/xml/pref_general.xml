@@ -17,15 +17,19 @@
         <SwitchPreference
             android:defaultValue="false"
             android:key="general_wifi"
-            android:title=" Change wifi" />
+            android:title="Change wifi" />
         <SwitchPreference
             android:defaultValue="false"
             android:key="general_sms"
-            android:title=" Incoming sms" />
+            android:title="Incoming sms" />
         <SwitchPreference
             android:defaultValue="false"
             android:key="general_call"
-            android:title=" Incoming calls" />
+            android:title="Incoming calls" />
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="general_gps"
+            android:title="GPS" />
     </PreferenceCategory>
     <PreferenceCategory android:title="Other">
         <ListPreference

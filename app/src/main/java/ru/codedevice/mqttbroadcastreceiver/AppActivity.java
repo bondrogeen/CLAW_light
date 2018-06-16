@@ -8,6 +8,9 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.content.IntentFilter;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Build;
@@ -51,6 +54,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -63,10 +67,9 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     private ExpandingList mExpandingList;
     MaterialDialog dialog;
     SharedPreferences settings;
-    android.content.BroadcastReceiver br;
 
     JSONObject mainObject = new JSONObject();
-    JSONObject subObject =new JSONObject();
+    JSONObject subObject = new JSONObject();
     JSONArray subArray = new JSONArray();
     JSONArray allArray = new JSONArray();
 
@@ -75,6 +78,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     Boolean general_sms = false;
     Boolean general_call = false;
     Boolean permission_two = false;
+    Boolean general_gps = false;
 
     String mqtt_firs_topic = "";
     String mqtt_device = "";
@@ -83,16 +87,12 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
 
     String[] PERMISSION_CALL = new String[]{
             Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_CONTACTS
+            Manifest.permission.READ_CONTACTS,
+            Manifest.permission.READ_CALL_LOG
     };
     String[] PERMISSION_SMS = new String[]{
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.READ_CONTACTS
-    };
-    String[] PERMISSION_SMS_AND_CALL = new String[]{
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.READ_PHONE_STATE
     };
 
     String[] PERMISSION_STORAGE = new String[]{
@@ -100,11 +100,19 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
 
+    String[] PERMISSION_GPS = new String[]{
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+    };
 
     final int PERMISSION_REQUEST_CODE_STORAGE = 1;
     final int PERMISSION_REQUEST_CODE_SMS = 2;
     final int PERMISSION_REQUEST_CODE_CALL = 3;
-    final int PERMISSION_REQUEST_CODE_SMS_AND_CALL = 4;
+    final int PERMISSION_REQUEST_CODE_GPS = 4;
+
+
+
+
 
     @Override
     public void onColorSelection(@NonNull ColorChooserDialog dialog, int selectedColor) {
@@ -133,7 +141,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         fab.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(checkPermissions(PERMISSION_STORAGE,PERMISSION_REQUEST_CODE_STORAGE)){
+                if (checkPermissions(PERMISSION_STORAGE, PERMISSION_REQUEST_CODE_STORAGE)) {
                     createElementItem();
                 }
             }
@@ -149,9 +157,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         navigationView.setNavigationItemSelectedListener(this);
         mExpandingList = findViewById(R.id.expanding_list_main);
 
-        initSettings();
-
-        if(checkPermissions(PERMISSION_STORAGE, PERMISSION_REQUEST_CODE_STORAGE)){
+        if (checkPermissions(PERMISSION_STORAGE, PERMISSION_REQUEST_CODE_STORAGE)) {
             createItems();
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -159,6 +165,9 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             Intent intent = new Intent(AppActivity.this, AppOreoService.class);
             startService(intent);
         }
+
+        initSettings();
+
     }
 
     @Override
@@ -172,7 +181,6 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     protected void onResume() {
         super.onResume();
         Log.d(TAG, "AppActivity: onResume()");
-
     }
 
     @Override
@@ -191,15 +199,10 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     protected void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "AppActivity: onDestroy()");
-        if(dialog!=null){
+        if (dialog != null) {
             dialog.dismiss();
         }
-        if(br!=null){
-            unregisterReceiver(br);
-        }
-
     }
-
 
 
     @Override
@@ -215,19 +218,20 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         else if (requestCode == PERMISSION_REQUEST_CODE_CALL) {
             Log.e(TAG, "onActivityResult resultCode : PERMISSION_REQUEST_CODE_CALL");
             if(checkPermissionsTwo(PERMISSION_STORAGE,PERMISSION_REQUEST_CODE_CALL)){
-                initSettings();
+
             }
         }
         else if (requestCode == PERMISSION_REQUEST_CODE_SMS) {
             Log.e(TAG, "onActivityResult resultCode : PERMISSION_REQUEST_CODE_SMS");
             if(checkPermissionsTwo(PERMISSION_STORAGE,PERMISSION_REQUEST_CODE_SMS)){
-                initSettings();
+
             }
         }
-        else if (requestCode == PERMISSION_REQUEST_CODE_SMS_AND_CALL) {
-            Log.e(TAG, "onActivityResult resultCode : PERMISSION_REQUEST_CODE_SMS_AND_CALL");
-            if(checkPermissionsTwo(PERMISSION_SMS_AND_CALL,PERMISSION_REQUEST_CODE_SMS_AND_CALL)){
-                initSettings();
+        else if (requestCode == PERMISSION_REQUEST_CODE_GPS) {
+            Log.e(TAG, "onActivityResult resultCode : PERMISSION_REQUEST_CODE_GPS");
+            if(checkPermissionsTwo(PERMISSION_GPS,PERMISSION_REQUEST_CODE_GPS)){
+                Intent intent = new Intent(AppActivity.this, AppGpsService.class);
+                startService(intent);
             }
         }
     }
@@ -238,6 +242,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         general_key = settings.getBoolean("general_key", false);
         general_sms = settings.getBoolean("general_sms", false);
         general_call = settings.getBoolean("general_call", false);
+        general_gps = settings.getBoolean("general_gps", false);
         mqtt_device = settings.getString("mqtt_device", "");
         mqtt_run = settings.getBoolean("mqtt_run", false);
         mqtt_firs_topic = settings.getString("mqtt_first_topic", "");
@@ -250,14 +255,16 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             editor.apply();
         }
 
-        if (general_sms && general_call){
-            checkPermissions(PERMISSION_SMS_AND_CALL, PERMISSION_REQUEST_CODE_SMS_AND_CALL);
-        }else{
-            if (general_sms){
-                checkPermissions(PERMISSION_SMS, PERMISSION_REQUEST_CODE_SMS);
-            }
-            if (general_call){
-                checkPermissions(PERMISSION_CALL, PERMISSION_REQUEST_CODE_CALL);
+        if (general_sms){
+            checkPermissions(PERMISSION_SMS, PERMISSION_REQUEST_CODE_SMS);
+        }
+        if (general_call){
+            checkPermissions(PERMISSION_CALL, PERMISSION_REQUEST_CODE_CALL);
+        }
+        if (general_gps){
+            if(checkPermissions(PERMISSION_GPS, PERMISSION_REQUEST_CODE_GPS)){
+                Intent intent = new Intent(AppActivity.this, AppGpsService.class);
+                startService(intent);
             }
         }
     }
@@ -952,6 +959,16 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
 
             }else{
                 requestPermission("In order to use this function, you need to give access to calls and contacts",requestCode);
+            }
+            return;
+        }
+
+        if (requestCode == PERMISSION_REQUEST_CODE_GPS) {
+            if (checkPermissionsTwo(permissions,requestCode)) {
+                Intent intent = new Intent(AppActivity.this, AppOreoService.class);
+                startService(intent);
+            }else{
+                requestPermission("In order to use this function, you need to give access to fine location",requestCode);
             }
             return;
         }
