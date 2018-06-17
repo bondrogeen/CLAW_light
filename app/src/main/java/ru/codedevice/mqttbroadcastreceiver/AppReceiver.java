@@ -54,6 +54,12 @@ public class AppReceiver extends BroadcastReceiver {
             context.startService(i);
         }
 
+        if (action.equals("ru.codedevice.mqttbroadcastreceiver.AppGpsService")){
+            i.putExtras(intent);
+            i.putExtra("statusInit","location");
+            context.startService(i);
+        }
+
         if (action.equals("android.intent.action.SCREEN_ON")
                 ||action.equals("android.intent.action.SCREEN_OFF")){
             i.putExtra("statusInit","screen");

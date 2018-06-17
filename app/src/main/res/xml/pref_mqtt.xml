@@ -3,7 +3,7 @@
     <SwitchPreference
         android:defaultValue="false"
         android:key="mqtt_run"
-        android:title="Run" />
+        android:title="Enable" />
     <EditTextPreference
         android:capitalize="words"
         android:defaultValue="my.mqtt.com"
@@ -36,6 +36,7 @@
         android:defaultValue="myPassword"
         android:inputType="textCapWords"
         android:key="mqtt_pass"
+        android:password="true"
         android:maxLines="1"
         android:selectAllOnFocus="true"
         android:singleLine="true"

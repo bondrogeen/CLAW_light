@@ -188,7 +188,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             bindPreferenceSummaryToValue(findPreference("mqtt_server"));
             bindPreferenceSummaryToValue(findPreference("mqtt_port"));
             bindPreferenceSummaryToValue(findPreference("mqtt_login"));
-            bindPreferenceSummaryToValue(findPreference("mqtt_pass"));
+//            bindPreferenceSummaryToValue(findPreference("mqtt_pass"));
             bindPreferenceSummaryToValue(findPreference("mqtt_device"));
             bindPreferenceSummaryToValue(findPreference("mqtt_first_topic"));
         }

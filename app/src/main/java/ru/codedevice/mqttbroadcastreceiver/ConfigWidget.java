@@ -71,12 +71,12 @@ public class ConfigWidget extends AppCompatActivity {
         textTitle = "Title";
         textValue = "false";
 
-        text = findViewById(R.id.widget_text);
+//        text = findViewById(R.id.widget_text);
         name = findViewById(R.id.widget_name);
         title = findViewById(R.id.widget_title);
 
         name.setText(textName, TextView.BufferType.EDITABLE);
-        text.setText(textText, TextView.BufferType.EDITABLE);
+//        text.setText(textText, TextView.BufferType.EDITABLE);
         title.setText(textTitle, TextView.BufferType.EDITABLE);
         type_group = findViewById(R.id.widget_type_grour);
 
@@ -94,9 +94,9 @@ public class ConfigWidget extends AppCompatActivity {
         String type = "";
         int checkedId = radioGroup.getCheckedRadioButtonId();
         switch (checkedId) {
-            case R.id.widget_type_text_title:
-                type = ConfigWidget.WIDGET_TYPE_TEXT_AND_TITLE;
-                break;
+//            case R.id.widget_type_text_title:
+//                type = ConfigWidget.WIDGET_TYPE_TEXT_AND_TITLE;
+//                break;
             case R.id.widget_type_button:
                 type = ConfigWidget.WIDGET_TYPE_BUTTON;
                 break;
@@ -106,7 +106,8 @@ public class ConfigWidget extends AppCompatActivity {
     }
     public void SaveButton(){
         textName = String.valueOf(name.getText());
-        textText = String.valueOf(text.getText());
+//        textText = String.valueOf(text.getText());
+        textText = "_";
         textTitle = String.valueOf(title.getText());
         textType = GetCheckedRadioButton(type_group);
 

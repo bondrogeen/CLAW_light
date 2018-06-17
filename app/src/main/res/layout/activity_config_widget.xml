@@ -53,17 +53,18 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintVertical_bias="0.143">
 
-                <RadioButton
-                    android:id="@+id/widget_type_text_title"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:text="Text and title" />
+                <!--<RadioButton-->
+                    <!--android:id="@+id/widget_type_text_title"-->
+                    <!--android:layout_width="match_parent"-->
+                    <!--android:layout_height="wrap_content"-->
+                    <!--android:checked="true"-->
+                    <!--android:text="Text and title" />-->
 
                 <RadioButton
                     android:id="@+id/widget_type_button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:checked="true"
                     android:text="Button" />
 
             </RadioGroup>
@@ -98,33 +99,33 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/widget_text_view" />
 
-            <TextView
-                android:id="@+id/widget_name_view"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_marginLeft="8dp"
-                android:layout_marginRight="8dp"
-                android:layout_marginStart="8dp"
-                android:layout_marginTop="16dp"
-                android:text="Text"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/widget_text" />
+            <!--<TextView-->
+                <!--android:id="@+id/widget_name_view"-->
+                <!--android:layout_width="0dp"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:layout_marginEnd="8dp"-->
+                <!--android:layout_marginLeft="8dp"-->
+                <!--android:layout_marginRight="8dp"-->
+                <!--android:layout_marginStart="8dp"-->
+                <!--android:layout_marginTop="16dp"-->
+                <!--android:text="Text"-->
+                <!--app:layout_constraintEnd_toEndOf="parent"-->
+                <!--app:layout_constraintStart_toStartOf="parent"-->
+                <!--app:layout_constraintTop_toBottomOf="@+id/widget_text" />-->
 
-            <EditText
-                android:id="@+id/widget_text"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_marginLeft="8dp"
-                android:layout_marginRight="8dp"
-                android:layout_marginStart="8dp"
-                android:ems="10"
-                android:inputType="textPersonName"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/widget_name_view" />
+            <!--<EditText-->
+                <!--android:id="@+id/widget_text"-->
+                <!--android:layout_width="0dp"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:layout_marginEnd="8dp"-->
+                <!--android:layout_marginLeft="8dp"-->
+                <!--android:layout_marginRight="8dp"-->
+                <!--android:layout_marginStart="8dp"-->
+                <!--android:ems="10"-->
+                <!--android:inputType="textPersonName"-->
+                <!--app:layout_constraintEnd_toEndOf="parent"-->
+                <!--app:layout_constraintStart_toStartOf="parent"-->
+                <!--app:layout_constraintTop_toBottomOf="@+id/widget_name_view" />-->
 
             <TextView
                 android:id="@+id/widget_title_view"

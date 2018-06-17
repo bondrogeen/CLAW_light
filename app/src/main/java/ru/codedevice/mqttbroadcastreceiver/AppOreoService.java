@@ -79,6 +79,7 @@ public class AppOreoService extends Service {
             filter.addAction(Intent.ACTION_BATTERY_CHANGED);
         }
         filter.addAction("ru.codedevice.mqttbroadcastreceiver.AppReceiver");
+        filter.addAction("ru.codedevice.mqttbroadcastreceiver.AppGpsService");
 
         br = new AppReceiver();
         registerReceiver(br, filter);

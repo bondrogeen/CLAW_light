@@ -1,7 +1,9 @@
 package ru.codedevice.mqttbroadcastreceiver;
 
 import android.Manifest;
+import android.app.ActivityManager;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -79,6 +81,8 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     Boolean general_call = false;
     Boolean permission_two = false;
     Boolean general_gps = false;
+    Boolean general_battery = false;
+    String general_gps_time = "60";
 
     String mqtt_firs_topic = "";
     String mqtt_device = "";
@@ -161,7 +165,6 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             createItems();
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Log.d(TAG, "event : ");
             Intent intent = new Intent(AppActivity.this, AppOreoService.class);
             startService(intent);
         }
@@ -243,6 +246,8 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         general_sms = settings.getBoolean("general_sms", false);
         general_call = settings.getBoolean("general_call", false);
         general_gps = settings.getBoolean("general_gps", false);
+        general_battery = settings.getBoolean("general_battery", false);
+        general_gps_time = settings.getString("general_gps_time", "60");
         mqtt_device = settings.getString("mqtt_device", "");
         mqtt_run = settings.getBoolean("mqtt_run", false);
         mqtt_firs_topic = settings.getString("mqtt_first_topic", "");
@@ -261,14 +266,45 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         if (general_call){
             checkPermissions(PERMISSION_CALL, PERMISSION_REQUEST_CODE_CALL);
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            if (isMyServiceRunning(AppOreoService.class)){
+                Intent intent = new Intent(AppActivity.this, AppOreoService.class);
+                stopService(intent);
+            }
+            Intent intent = new Intent(AppActivity.this, AppOreoService.class);
+            startService(intent);
+        }
+
         if (general_gps){
             if(checkPermissions(PERMISSION_GPS, PERMISSION_REQUEST_CODE_GPS)){
+                if (isMyServiceRunning(AppGpsService.class)){
+                    Intent intent = new Intent(AppActivity.this, AppGpsService.class);
+                    stopService(intent);
+                }
                 Intent intent = new Intent(AppActivity.this, AppGpsService.class);
+                intent.putExtra("status","init");
+                intent.putExtra("time",general_gps_time);
                 startService(intent);
+            }
+        }else{
+            if (isMyServiceRunning(AppGpsService.class)){
+                Intent intent = new Intent(AppActivity.this, AppGpsService.class);
+                stopService(intent);
             }
         }
     }
 
+
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {

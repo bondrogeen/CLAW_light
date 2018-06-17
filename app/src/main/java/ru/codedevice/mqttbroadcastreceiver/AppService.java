@@ -154,6 +154,20 @@ public class AppService extends Service implements MqttCallback {
                     String text = intent.getStringExtra("Text");
                     map.put("info/googleNow/text", text.toLowerCase());
                     break;
+                case "location":
+                    String latitude = intent.getStringExtra("latitude");
+                    String longitude = intent.getStringExtra("longitude");
+                    String speed = intent.getStringExtra("speed");
+                    String time = intent.getStringExtra("time");
+                    String date = intent.getStringExtra("date");
+                    String unixTime = intent.getStringExtra("unixTime");
+                    map.put("info/location/latitude", latitude);
+                    map.put("info/location/longitude", longitude);
+                    map.put("info/location/speed", speed);
+                    map.put("info/location/time", time);
+                    map.put("info/location/date", date);
+                    map.put("info/location/unixTime", unixTime);
+                    break;
                 case "test":
                     map.put("info/buttons/check", "true");
                     test = true;
