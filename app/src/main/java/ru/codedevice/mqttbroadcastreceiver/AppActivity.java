@@ -56,6 +56,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -114,9 +115,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
     final int PERMISSION_REQUEST_CODE_CALL = 3;
     final int PERMISSION_REQUEST_CODE_GPS = 4;
 
-
-
-
+    ArrayList<String> permission_all = new ArrayList<String>();
 
     @Override
     public void onColorSelection(@NonNull ColorChooserDialog dialog, int selectedColor) {
@@ -252,6 +251,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         mqtt_run = settings.getBoolean("mqtt_run", false);
         mqtt_firs_topic = settings.getString("mqtt_first_topic", "");
 
+
         if (mqtt_device==null || mqtt_device.equals("")) {
             mqtt_device = Build.MODEL;
             mqtt_device = mqtt_device.replaceAll("\\s+","_");
@@ -259,6 +259,18 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
             editor.putString("mqtt_device", mqtt_device);
             editor.apply();
         }
+
+        if (general_sms){
+            addArray(PERMISSION_SMS);
+        }
+        if (general_call){
+            addArray(PERMISSION_CALL);
+        }
+        if (general_gps){
+            addArray(PERMISSION_GPS);
+        }
+
+        checkPermissions(permission_all.toArray(new String[permission_all.size()]), 9);
 
         if (general_sms){
             checkPermissions(PERMISSION_SMS, PERMISSION_REQUEST_CODE_SMS);
@@ -295,6 +307,12 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
         }
     }
 
+
+    public void addArray(String[] arr) {
+        for (String p : arr) {
+            permission_all.add(p);
+        }
+    }
 
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
