@@ -1,66 +1,59 @@
 package ru.codedevice.mqttbroadcastreceiver;
 
-import android.Manifest;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.content.SharedPreferences;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.os.IBinder;
-import android.support.v4.app.ActivityCompat;
+import android.preference.PreferenceManager;
 import android.util.Log;
-
+import com.google.android.gms.location.DetectedActivity;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Timer;
-import java.util.TimerTask;
-
 import io.nlopez.smartlocation.OnLocationUpdatedListener;
 import io.nlopez.smartlocation.SmartLocation;
+import io.nlopez.smartlocation.location.config.LocationAccuracy;
+import io.nlopez.smartlocation.location.config.LocationParams;
+import io.nlopez.smartlocation.location.providers.LocationBasedOnActivityProvider;
+import io.nlopez.smartlocation.location.providers.LocationManagerProvider;
 
-public class AppGpsService extends Service{
+public class AppGpsService extends Service implements LocationBasedOnActivityProvider.LocationBasedOnActivityListener {
 
-    LocationManager locationManager;
     Timer timer;
     String TAG = "AppGpsService";
+    SharedPreferences settings;
+    String general_gps_time;
 
-    public AppGpsService() {
-    }
-
-
+    PendingIntent pi;
+    AlarmManager am;
+    Intent intent;
     @Override
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "onCreate");
         timer = new Timer();
+        settings = PreferenceManager.getDefaultSharedPreferences(this);
+        general_gps_time = settings.getString("general_gps_time", "60");
+        setAlarm(Integer.parseInt(general_gps_time));
     }
+
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "onDestroy()");
-        timer.cancel();
+        cancelAlarm();
         stopSelf();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "startId :" + startId);
-        if (intent != null && intent.getExtras() != null && startId == 1) {
-            String status = intent.getStringExtra("status");
-            Log.d(TAG, "status :" + status);
-            switch (status) {
-                case "init":
-                    String time = intent.getStringExtra("time");
-                    timer.schedule(new UpdateTimeTask(), 0, Long.parseLong(time)*1000);
-                    break;
-            }
-        }
+        getLocation();
         Log.d(TAG, "onStartCommand");
-        return super.onStartCommand(intent, flags, startId);
+        return Service.START_STICKY;
     }
 
     @Override
@@ -69,7 +62,8 @@ public class AppGpsService extends Service{
     }
 
     public void getLocation(){
-        SmartLocation.with(this).location()
+        SmartLocation.with(getApplicationContext())
+                .location(new LocationManagerProvider())
                 .oneFix()
                 .start(new OnLocationUpdatedListener() {
                     @Override
@@ -88,14 +82,29 @@ public class AppGpsService extends Service{
                             intent.putExtra("time", String.format("%tT", new Date(location.getTime())));
                             sendBroadcast(intent);
                         }
+
                     }
                 });
+
     }
 
-    class UpdateTimeTask extends TimerTask {
-        public void run() {
-//            Log.d(TAG, "UpdateTimeTask : run");
-            getLocation();
-        }
+    @Override
+    public LocationParams locationParamsForActivity(DetectedActivity detectedActivity) {
+
+        return null;
+    }
+
+    public void setAlarm(int time){
+        am =(AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        intent = new Intent(this, AppReceiver.class);
+        intent.setAction("getLocation");
+        pi = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 1000 * time, pi); // Millisec * Second * Minute
+    }
+
+    public void cancelAlarm(){
+        Log.e(TAG, "cancelAlarm 1111");
+        am.cancel(pi);
+        Log.e(TAG, "cancelAlarm  22222");
     }
 }

@@ -39,6 +39,9 @@ public class AppReceiver extends BroadcastReceiver {
         Log.i(TAG, "Action : " + action);
 
 
+        if (action == null ){
+            return;
+        }
         i = new Intent(context, AppService.class);
 
         if (action.equals("android.intent.action.BOOT_COMPLETED")
@@ -57,6 +60,11 @@ public class AppReceiver extends BroadcastReceiver {
         if (action.equals("ru.codedevice.mqttbroadcastreceiver.AppGpsService")){
             i.putExtras(intent);
             i.putExtra("statusInit","location");
+            context.startService(i);
+        }
+
+        if (action.equals("getLocation")){
+            Intent i = new Intent( context, AppGpsService.class);
             context.startService(i);
         }
 

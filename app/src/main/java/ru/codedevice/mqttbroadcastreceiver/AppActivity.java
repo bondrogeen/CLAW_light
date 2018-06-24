@@ -294,7 +294,7 @@ public class AppActivity extends AppCompatActivity implements NavigationView.OnN
                     Intent intent = new Intent(AppActivity.this, AppGpsService.class);
                     stopService(intent);
                 }
-                Intent intent = new Intent(AppActivity.this, AppGpsService.class);
+                Intent intent = new Intent(getApplicationContext(), AppGpsService.class);
                 intent.putExtra("status","init");
                 intent.putExtra("time",general_gps_time);
                 startService(intent);
